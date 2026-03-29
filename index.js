@@ -512,3 +512,9 @@ app.listen(PORT, async () => {
   await setupDB();
   console.log('SeatX running on port ' + PORT);
 });
+// Auto monitor every 15 seconds
+setInterval(async () => {
+  try {
+    await fetch(`http://localhost:${PORT}/api/monitor`);
+  } catch(e) {}
+}, 15000);
