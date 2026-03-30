@@ -650,7 +650,7 @@ function renderEventCard(e: any): string {
   const cardClass = band === 'very_high' || band === 'high' ? 'ecard hot-card' : band === 'medium' ? 'ecard warm-card' : 'ecard';
   const scoreColor = score >= 80 ? '#ef4444' : score >= 55 ? '#f97316' : score >= 30 ? '#eab308' : '#a3e635';
   const demandLabel = band === 'very_high' ? '🔥 On Fire' : band === 'high' ? '⚡ High Demand' : band === 'medium' ? '👀 Picking Up' : '○ Watching';
-  const demandTagClass = `cdt-${band}`;
+ const demandTagClass = 'cdt-' + band;
 
   const imgSection = e.hero_image
   const srcPart = e.source_name ? '<div class="card-source">' + e.source_name + '</div>' : '';
