@@ -666,7 +666,7 @@ function renderEventCard(e: any): string {
       </div>
       <div class="card-title">${e.title}</div>
       <div class="card-url">${e.event_url}</div>
-      ${e.event_date || e.location ? `<div class="card-meta-row">${e.event_date ? `<div class="card-meta-item">📅 ${e.event_date}</div>` : ''}${e.location ? `<div class="card-meta-item">📍 ${e.location}</div>` : ''}</div>` : ''}
+      (e.event_date || e.location ? '<div class="card-meta-row">' + (e.event_date ? '<div class="card-meta-item">📅 ' + e.event_date + '</div>' : '') + (e.location ? '<div class="card-meta-item">📍 ' + e.location + '</div>' : '') + '</div>' : '') +
       <div class="card-score-row">
         <div class="score-track"><div class="score-fill" data-score="${score}" style="width:0%;background:${scoreColor}"></div></div>
         <div class="score-val">${score}</div>
