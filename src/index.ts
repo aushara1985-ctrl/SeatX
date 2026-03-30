@@ -317,7 +317,7 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
       <div class="empty-icon">🎫</div>
       <div class="empty-title" id="empt">No events yet</div>
       <div class="empty-sub" id="emps">Add the first event above to start tracking ↑</div>
-    </div>` : events.map(e => renderEventCard(e)).join('')}
+    </div>` : events.map(e => buildCard(e)).join('')}
   </div>
 </div>
 
