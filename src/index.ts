@@ -653,10 +653,10 @@ function renderEventCard(e: any): string {
   const demandTagClass = `cdt-${band}`;
 
   const imgSection = e.hero_image
-    ? `<div class="card-img"><img src="${e.hero_image}" alt="${e.title}" loading="lazy" onerror="this.parentNode.innerHTML='<div class=card-img-fallback><div class=card-img-icon>🎫</div></div>'"/><div class="card-overlay"></div>${e.source_name ? `<div class="card-source">${e.source_name}</div>` : ''}<div class="card-status-badge ${statusClass}">${statusLabel}</div></div>`
-    : `<div class="card-img"><div class="card-img-fallback"><div class="card-img-icon">🎫</div></div>${e.source_name ? `<div class="card-source">${e.source_name}</div>` : ''}<div class="card-status-badge ${statusClass}">${statusLabel}</div></div>`;
-
-  return `
+  const srcPart = e.source_name ? '<div class="card-source">' + e.source_name + '</div>' : '';
+  const imgSection = e.hero_image
+    ? '<div class="card-img"><img src="' + e.hero_image + '" alt="' + e.title + '" loading="lazy" onerror="this.parentNode.innerHTML=\'<div class=card-img-fallback><div class=card-img-icon>🎫</div></div>\'"/><div class="card-overlay"></div>' + srcPart + '<div class="card-status-badge ' + statusClass + '">' + statusLabel + '</div></div>'
+    : '<div class="card-img"><div class="card-img-fallback"><div class="card-img-icon">🎫</div></div>' + srcPart + '<div class="card-status-badge ' + statusClass + '">' + statusLabel + '</div></div>';
   <div class="${cardClass}">
     ${imgSection}
     <div class="card-body">
