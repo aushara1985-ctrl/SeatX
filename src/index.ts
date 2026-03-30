@@ -643,44 +643,40 @@ document.addEventListener('DOMContentLoaded', () => {
 </html>\`;
 }
 function renderEventCard(e: any): string {
-  const band = e.demand_band || 'low';
-  const score = e.demand_score || 0;
-  const statusClass = e.status === 'available' ? 'csb-available' : e.status === 'maybe_available' ? 'csb-maybe' : 'csb-unavailable';
-  const statusLabel = e.status === 'available' ? '⚡ Available' : e.status === 'maybe_available' ? '👀 Maybe' : '○ Watching';
-  const cardClass = band === 'very_high' || band === 'high' ? 'ecard hot-card' : band === 'medium' ? 'ecard warm-card' : 'ecard';
-  const scoreColor = score >= 80 ? '#ef4444' : score >= 55 ? '#f97316' : score >= 30 ? '#eab308' : '#a3e635';
-  const demandLabel = band === 'very_high' ? '🔥 On Fire' : band === 'high' ? '⚡ High Demand' : band === 'medium' ? '👀 Picking Up' : '○ Watching';
- const demandTagClass = 'cdt-' + band;
+  const band: string = e.demand_band || 'low';
+  const score: number = e.demand_score || 0;
+  const statusClass: string = e.status === 'available' ? 'csb-available' : e.status === 'maybe_available' ? 'csb-maybe' : 'csb-unavailable';
+  const statusLabel: string = e.status === 'available' ? '⚡ Available' : e.status === 'maybe_available' ? '👀 Maybe' : '○ Watching';
+  const cardClass: string = (band === 'very_high' || band === 'high') ? 'ecard hot-card' : band === 'medium' ? 'ecard warm-card' : 'ecard';
+  const scoreColor: string = score >= 80 ? '#ef4444' : score >= 55 ? '#f97316' : score >= 30 ? '#eab308' : '#a3e635';
+  const demandLabel: string = band === 'very_high' ? '🔥 On Fire' : band === 'high' ? '⚡ High Demand' : band === 'medium' ? '👀 Picking Up' : '○ Watching';
+  const demandTagClass: string = 'cdt-' + band;
+  const sourcePart: string = e.source_name ? '<div class="card-source">' + e.source_name + '</div>' : '';
+  const metaPart: string = (e.event_date || e.location)
+    ? '<div class="card-meta-row">'
+      + (e.event_date ? '<div class="card-meta-item">📅 ' + e.event_date + '</div>' : '')
+      + (e.location ? '<div class="card-meta-item">📍 ' + e.location + '</div>' : '')
+      + '</div>'
+    : '';
+  const imgSection: string = e.hero_image
+    ? '<div class="card-img"><img src="' + e.hero_image + '" alt="' + e.title + '" loading="lazy" onerror="this.parentNode.innerHTML=\'<div class=card-img-fallback><div class=card-img-icon>🎫</div></div>\'"/><div class="card-overlay"></div>' + sourcePart + '<div class="card-status-badge ' + statusClass + '">' + statusLabel + '</div></div>'
+    : '<div class="card-img"><div class="card-img-fallback"><div class="card-img-icon">🎫</div></div>' + sourcePart + '<div class="card-status-badge ' + statusClass + '">' + statusLabel + '</div></div>';
 
-  const imgSection = e.hero_image
-  const srcPart = e.source_name ? '<div class="card-source">' + e.source_name + '</div>' : '';
-  const imgSection = e.hero_image
-    ? '<div class="card-img"><img src="' + e.hero_image + '" alt="' + e.title + '" loading="lazy" onerror="this.parentNode.innerHTML=\'<div class=card-img-fallback><div class=card-img-icon>🎫</div></div>\'"/><div class="card-overlay"></div>' + srcPart + '<div class="card-status-badge ' + statusClass + '">' + statusLabel + '</div></div>'
-    : '<div class="card-img"><div class="card-img-fallback"><div class="card-img-icon">🎫</div></div>' + srcPart + '<div class="card-status-badge ' + statusClass + '">' + statusLabel + '</div></div>';
-  <div class="${cardClass}">
-    ${imgSection}
-    <div class="card-body">
-      <div class="card-demand-row">
-        <div class="card-demand-tag ${demandTagClass}">${demandLabel}</div>
-        <div class="card-watchers">👥 ${e.watchers_count || 0} watching</div>
-      </div>
-      <div class="card-title">${e.title}</div>
-      <div class="card-url">${e.event_url}</div>
-      (e.event_date || e.location ? '<div class="card-meta-row">' + (e.event_date ? '<div class="card-meta-item">📅 ' + e.event_date + '</div>' : '') + (e.location ? '<div class="card-meta-item">📍 ' + e.location + '</div>' : '') + '</div>' : '') +
-      <div class="card-score-row">
-        <div class="score-track"><div class="score-fill" data-score="${score}" style="width:0%;background:${scoreColor}"></div></div>
-        <div class="score-val">${score}</div>
-      </div>
-      <div class="card-check-row">
-        <div class="check-label"><div class="check-dot"></div><span class="cdl">Next check</span></div>
-        <div class="check-timer cdv">0:15</div>
-      </div>
-      <div class="card-sub-row">
-        <input class="card-email" id="em-${e.id}" placeholder="your@email.com" type="email"/>
-        <button class="card-alert-btn" onclick="subscribe(${e.id},this)">Get Alert</button>
-      </div>
-    </div>
-  </div>`;
+  return '<div class="' + cardClass + '">'
+    + imgSection
+    + '<div class="card-body">'
+    + '<div class="card-demand-row">'
+    + '<div class="card-demand-tag ' + demandTagClass + '">' + demandLabel + '</div>'
+    + '<div class="card-watchers">👥 ' + (e.watchers_count || 0) + ' watching</div>'
+    + '</div>'
+    + '<div class="card-title">' + e.title + '</div>'
+    + '<div class="card-url">' + e.event_url + '</div>'
+    + metaPart
+    + '<div class="card-score-row"><div class="score-track"><div class="score-fill" data-score="' + score + '" style="width:0%;background:' + scoreColor + '"></div></div><div class="score-val">' + score + '</div></div>'
+    + '<div class="card-check-row"><div class="check-label"><div class="check-dot"></div><span class="cdl">Next check</span></div><div class="check-timer cdv">0:15</div></div>'
+    + '<div class="card-sub-row"><input class="card-email" id="em-' + e.id + '" placeholder="your@email.com" type="email"/><button class="card-alert-btn" onclick="subscribe(' + e.id + ',this)">Get Alert</button></div>'
+    + '</div>'
+    + '</div>';
 }
 
 // Routes
