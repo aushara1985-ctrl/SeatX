@@ -778,7 +778,7 @@ app.post('/api/subscribe', async (req, res) => {
       'INSERT INTO subscriptions (event_id, email) VALUES ($1,$2) ON CONFLICT DO NOTHING RETURNING id',
       [eventId, email]
     );
-    const inserted = result.rowCount > 0;
+    const inserted = (result.rowCount ?? 0) > 0;
     if (inserted) {
       await pool.query('UPDATE events SET watchers_count = watchers_count + 1 WHERE id = $1', [eventId]);
       const { logActivity } = await import('./feed');
