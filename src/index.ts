@@ -348,6 +348,17 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
   </div>
 </div>
 
+<div class="section">
+  <div class="section-head">
+    <div>
+      <div class="section-eyebrow">🔥 Trending</div>
+      <div class="section-title">Hottest right now</div>
+    </div>
+  </div>
+  <div class="events-grid">
+    ${events.filter((e: any) => (e.demand_score || 0) > 20).slice(0,3).map((e: any) => renderEventCard(e)).join('') || '<p style="color:var(--muted2)">No trending events yet</p>'}
+  </div>
+</div>
 <div class="section" id="evs">
   <div class="section-head">
     <div>
