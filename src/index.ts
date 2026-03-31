@@ -739,6 +739,7 @@ function renderEventCard(e: any): string {
     + '<div class="card-demand-tag ' + demandTagClass + '">' + demandLabel + '</div>'
     + '<div class="card-watchers">👥 ' + (e.watchers_count || 0) + ' watching</div>'
     + '</div>'
+    + (fomoText ? '<div class="card-fomo">' + fomoText + '</div>' : '')
     + '<div class="card-title">' + e.title + '</div>'
     + '<div class="card-url">' + e.event_url + '</div>'
     + metaPart
