@@ -6,7 +6,11 @@ export type ActivityType =
   | 'alert_sent'
   | 'demand_spike'
   | 'page_change'
-  | 'metadata_updated';
+  | 'metadata_updated'
+  | 'watcher_spike'
+  | 'availability_detected'
+  | 'recheck_confirmed'
+  | 'source_unstable';
 
 export interface Event {
   id: number;
@@ -80,9 +84,27 @@ export interface DemandResult {
   score: number;
   band: DemandBand;
   watchersCount: number;
+  trend: string;
 }
 
 export interface SourceParser {
   extractSignals(html: string): SignalResult;
   extractMetadata(html: string): MetadataResult;
+}
+
+export interface EventIntelligence {
+  eventId: number;
+  title: string;
+  status: EventStatus;
+  watchersCount: number;
+  demandScore: number;
+  demandBand: DemandBand;
+  demandTrend: string;
+  recentActivityCount: number;
+  recentChecks: number;
+  lastMeaningfulChange: Date | null;
+  sourceReliability: number;
+  heroImage: string | null;
+  eventDate: string | null;
+  location: string | null;
 }
