@@ -7,6 +7,9 @@ import { logActivity } from './feed';
 import { GenericParser } from './sourceParsers/generic';
 import { WebookParser } from './sourceParsers/webook';
 import { TicketmasterParser } from './sourceParsers/ticketmaster';
+import { computeConfidence } from './confidence';
+import { recordSignalOutcome } from './learning';
+import { recordSuccess, recordError } from './reliability';
 import { Event, SignalResult, SourceInfo, SourceParser } from './types';
 
 function detectSource(url: string): SourceInfo {
@@ -36,25 +39,19 @@ function shouldTriggerAlert(
   previousStatus: string,
   currentStatus: string,
   lastTriggeredAt: Date | null,
-  confidence: number,
-  reliabilityScore: number
+  confidence: number
 ): boolean {
-  const adjustedThreshold = Math.max(50, 70 - (reliabilityScore - 80) * 0.5);
-  if (confidence < adjustedThreshold) return false;
-
   const validTransitions = [
     'unavailable->maybe_available',
     'unavailable->available',
     'maybe_available->available',
   ];
-
   if (!validTransitions.includes(`${previousStatus}->${currentStatus}`)) return false;
-
+  if (confidence < 72) return false;
   if (lastTriggeredAt) {
     const minutesSince = (Date.now() - new Date(lastTriggeredAt).getTime()) / 60000;
     if (minutesSince < 30) return false;
   }
-
   return true;
 }
 
@@ -96,6 +93,7 @@ export async function checkEvent(ev: Event): Promise<void> {
     const pageHash = normalizeAndHash(html);
     const signals = parser.extractSignals(html);
 
+    // Metadata extraction
     const rawMeta = parser.extractMetadata(html);
     const meta = sanitizeMetadata(rawMeta);
     const shouldUpdateMeta = !ev.hero_image || !ev.event_date ||
@@ -115,6 +113,10 @@ export async function checkEvent(ev: Event): Promise<void> {
       await logActivity(ev.id, 'metadata_updated', `Metadata refreshed for "${ev.title}"`);
     }
 
+    // Compute advanced confidence
+    const confidenceResult = await computeConfidence(signals, source.sourceName);
+
+    // Log check
     await pool.query(
       `INSERT INTO event_checks
         (event_id, detected_status, page_hash, positive_signals, negative_signals,
@@ -124,38 +126,48 @@ export async function checkEvent(ev: Event): Promise<void> {
         ev.id, signals.status, pageHash,
         signals.positiveSignals, signals.negativeSignals,
         signals.buttonSignals, signals.domSignals,
-        signals.snippet, signals.confidence, responseTime,
+        signals.snippet, confidenceResult.score, responseTime,
       ]
     );
 
-    await pool.query(
-      `INSERT INTO source_stats (source_name, total_checks, success_checks)
-       VALUES ($1, 1, 1)
-       ON CONFLICT (source_name) DO UPDATE SET
-         total_checks = source_stats.total_checks + 1,
-         success_checks = source_stats.success_checks + 1,
-         updated_at = NOW()`,
-      [source.sourceName]
-    );
+    // Record source success
+    await recordSuccess(source.sourceName);
 
     if (pageHash === ev.last_page_hash && signals.status === ev.status) return;
 
     let finalSignals = signals;
-    if (signals.confidence >= 50 && signals.confidence < 70) {
+    let finalConfidence = confidenceResult;
+
+    // Smart recheck for borderline confidence
+    if (confidenceResult.shouldRecheck) {
+      await logActivity(ev.id, 'status_change', `Recheck triggered for "${ev.title}" (confidence: ${confidenceResult.score})`);
       const recheck = await recheckEvent(ev.event_url, parser);
-      if (recheck && recheck.confidence >= signals.confidence) {
+      if (recheck) {
         finalSignals = recheck;
+        finalConfidence = await computeConfidence(recheck, source.sourceName);
+        await logActivity(ev.id, 'status_change', `Recheck result: ${recheck.status} (confidence: ${finalConfidence.score})`);
       } else {
         return;
       }
+    }
+
+    if (!finalConfidence.shouldAlert && !confidenceResult.shouldAlert) {
+      // Record signal outcome for learning
+      await recordSignalOutcome(
+        ev.id, source.sourceName,
+        finalSignals.positiveSignals,
+        finalSignals.status,
+        finalConfidence.score,
+        false
+      );
+      return;
     }
 
     const trigger = shouldTriggerAlert(
       ev.last_status || ev.status,
       finalSignals.status,
       ev.last_triggered_at,
-      finalSignals.confidence,
-      ev.source_reliability_score || 80
+      finalConfidence.score
     );
 
     await pool.query(
@@ -166,13 +178,13 @@ export async function checkEvent(ev: Event): Promise<void> {
         recent_transition_count = CASE WHEN $1 != status THEN recent_transition_count + 1 ELSE recent_transition_count END
         ${trigger ? ', last_triggered_at=NOW()' : ''}
        WHERE id=$7`,
-      [finalSignals.status, ev.status, pageHash, source.sourceName, source.sourceLogo, finalSignals.confidence, ev.id]
+      [finalSignals.status, ev.status, pageHash, source.sourceName, source.sourceLogo, finalConfidence.score, ev.id]
     );
 
     if (finalSignals.status !== ev.status) {
       await logActivity(
         ev.id, 'status_change',
-        `${ev.title}: ${ev.status} → ${finalSignals.status} (confidence: ${finalSignals.confidence})`
+        `${ev.title}: ${ev.status} → ${finalSignals.status} (confidence: ${finalConfidence.score})`
       );
     }
 
@@ -189,6 +201,15 @@ export async function checkEvent(ev: Event): Promise<void> {
         });
       }
       await logActivity(ev.id, 'alert_sent', `Alert sent to ${subs.rows.length} subscribers — ${finalSignals.status}`);
+
+      // Record signal outcome for learning
+      await recordSignalOutcome(
+        ev.id, source.sourceName,
+        finalSignals.positiveSignals,
+        finalSignals.status,
+        finalConfidence.score,
+        true
+      );
     }
 
     await updateDemand(ev.id);
@@ -199,15 +220,7 @@ export async function checkEvent(ev: Event): Promise<void> {
       `INSERT INTO event_checks (event_id, error_message, response_time) VALUES ($1,$2,$3)`,
       [ev.id, msg, Date.now() - start]
     );
-    await pool.query(
-      `INSERT INTO source_stats (source_name, total_checks, error_checks)
-       VALUES ($1, 1, 1)
-       ON CONFLICT (source_name) DO UPDATE SET
-         total_checks = source_stats.total_checks + 1,
-         error_checks = source_stats.error_checks + 1,
-         updated_at = NOW()`,
-      [source.sourceName]
-    );
+    await recordError(source.sourceName);
   }
 }
 
