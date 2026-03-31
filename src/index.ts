@@ -713,6 +713,14 @@ function renderEventCard(e: any): string {
   const scoreColor: string = score >= 80 ? '#ef4444' : score >= 55 ? '#f97316' : score >= 30 ? '#eab308' : '#a3e635';
   const demandLabel: string = band === 'very_high' ? '🔥 On Fire' : band === 'high' ? '⚡ High Demand' : band === 'medium' ? '👀 Picking Up' : '○ Watching';
   const demandTagClass: string = 'cdt-' + band;
+  const fomoText: string = band === 'very_high'
+    ? '🔥 Selling fast — high demand'
+    : band === 'high'
+    ? '⚡ People joining right now'
+    : band === 'medium'
+    ? '👀 Demand picking up'
+    : '';
+  const trendArrow: string = '';
   const sourcePart: string = e.source_name ? '<div class="card-source">' + e.source_name + '</div>' : '';
   const metaPart: string = (e.event_date || e.location)
     ? '<div class="card-meta-row">'
