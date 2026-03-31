@@ -199,6 +199,7 @@ h1 em{color:var(--lime);font-style:normal;display:block}
 .card-email:focus{border-color:rgba(163,230,53,.3)}
 .card-alert-btn{background:var(--lime-dim);border:1px solid rgba(163,230,53,.2);border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;color:var(--lime);cursor:pointer;transition:all .2s;white-space:nowrap}
 .card-alert-btn:hover{background:rgba(163,230,53,.2)}
+.card-fomo{font-size:11px;font-weight:700;color:#fb923c;margin-bottom:8px;display:flex;align-items:center;gap:4px}
 
 /* HOW IT WORKS */
 .steps-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
