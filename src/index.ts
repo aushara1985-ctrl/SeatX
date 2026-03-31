@@ -774,6 +774,16 @@ app.post('/api/events', async (req, res) => {
 app.post('/api/subscribe', async (req, res) => {
   try {
     const { eventId, email } = req.body;
+    // Freemium limit check
+    const { getActiveEventCount } = await import('./db');
+    const activeCount = await getActiveEventCount(email);
+    if (activeCount >= 3) {
+      return res.status(403).json({
+        error: 'limit_reached',
+        message: 'Free plan allows only 3 active events',
+        upgrade: true
+      });
+    }
     const result = await pool.query(
       'INSERT INTO subscriptions (event_id, email) VALUES ($1,$2) ON CONFLICT DO NOTHING RETURNING id',
       [eventId, email]
