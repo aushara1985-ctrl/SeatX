@@ -749,7 +749,10 @@ function renderEventCard(e: any): string {
     + '<div class="card-body">'
     + '<div class="card-demand-row">'
     + '<div class="card-demand-tag ' + demandTagClass + '">' + demandLabel + '</div>'
-    + '<div class="card-watchers">👥 ' + (e.watchers_count || 0) + ' watching</div>'
++ '<div class="card-watchers">👥 ' + (e.watchers_count || 0) + ' watching'
++ (e.demand_band === 'very_high' || e.demand_band === 'high' ? ' · <span style="color:#fb923c">Spiking</span>' : '')
++ '</div>'
++ (e.recent_transition_count > 0 ? '<div style="font-size:10px;color:var(--lime);margin-bottom:6px">⚡ ' + e.recent_transition_count + ' availability changes detected</div>' : '')
     + '</div>'
     + (fomoText ? '<div class="card-fomo">' + fomoText + '</div>' : '')
     + '<div class="card-title">' + e.title + '</div>'
