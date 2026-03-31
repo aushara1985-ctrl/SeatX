@@ -111,6 +111,9 @@ export async function setupDB(): Promise<void> {
     `ALTER TABLE event_checks ADD COLUMN IF NOT EXISTS button_signals TEXT[]`,
     `ALTER TABLE event_checks ADD COLUMN IF NOT EXISTS dom_signals TEXT[]`,
     `ALTER TABLE event_checks ADD COLUMN IF NOT EXISTS confidence INTEGER`,
+    `ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS plan_type TEXT DEFAULT 'free'`,
+`ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS monitoring_status TEXT DEFAULT 'pending'`,
+`ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS last_alert_sent_at TIMESTAMPTZ`,
   ];
 
   for (const m of migrations) {
@@ -118,4 +121,13 @@ export async function setupDB(): Promise<void> {
   }
 
   console.log('[db] Schema ready');
+  export async function getActiveEventCount(email: string): Promise<number> {
+  try {
+    const r = await pool.query(
+      `SELECT COUNT(*) FROM subscriptions WHERE email=$1 AND monitoring_status='active'`,
+      [email]
+    );
+    return parseInt(r.rows[0].count, 10);
+  } catch (_) { return 0; }
+}
 }
