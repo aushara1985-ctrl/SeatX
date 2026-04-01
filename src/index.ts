@@ -799,7 +799,7 @@ app.post('/api/subscribe', async (req, res) => {
   try {
     const { eventId, email } = req.body;
     // Freemium limit check
-    const { getActiveEventCount } = await import('./db');
+    const { getActiveEventCount } = require('./db');
     const activeCount = await getActiveEventCount(email);
     if (activeCount >= 3) {
       return res.status(403).json({
