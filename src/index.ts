@@ -269,6 +269,16 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
   </div>
 </nav>
 
+<div class="quick-hero">
+  <div class="qh-inner">
+    <div class="qh-label" id="qhl">🎫 Track any event — free</div>
+    <div class="qh-row">
+      <input class="qh-input" id="qh-url" type="url" placeholder="Paste ticket link here..." autocomplete="off"/>
+      <button class="qh-btn" id="qh-btn" onclick="quickAdd()">Start watching free →</button>
+    </div>
+    <div class="qh-or" id="qh-or">or <button class="qh-demo" onclick="tryDemo()">try a demo event</button></div>
+  </div>
+</div>
 <div class="ticker-wrap">
   <div class="ticker" id="ticker">
     ${[...Array(2)].map(() => (feed.slice(0,8).map(f =>
