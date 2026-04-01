@@ -8,6 +8,10 @@ const TYPE_EMOJI: Record<ActivityType, string> = {
   demand_spike: '🔥',
   page_change: '📄',
   metadata_updated: '🎫',
+  watcher_spike: '📈',
+  availability_detected: '✅',
+  recheck_confirmed: '🔁',
+  source_unstable: '⚠️',
 };
 
 export async function getActivityFeed(limit = 20): Promise<ActivityFeedItem[]> {
