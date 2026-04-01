@@ -234,7 +234,11 @@ export async function runMonitorCycle(): Promise<void> {
 
     for (const ev of rows) {
       await checkEvent(ev as Event);
-      const interval = ev.check_interval || 15;
+      const planInterval = ev.plan_type === 'lifetime' ? 10
+  : ev.plan_type === 'pro' ? 15
+  : ev.plan_type === 'entry' ? 30
+  : 90; // free = slow
+const interval = planInterval;
       await pool.query(
         `UPDATE events SET next_check_at = NOW() + ($1 || ' seconds')::INTERVAL WHERE id = $2`,
         [interval, ev.id]
