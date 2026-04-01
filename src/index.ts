@@ -243,6 +243,25 @@ h1 em{color:var(--lime);font-style:normal;display:block}
 @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
 .shimmer{background:linear-gradient(90deg,rgba(255,255,255,.03) 25%,rgba(255,255,255,.07) 50%,rgba(255,255,255,.03) 75%);background-size:200% 100%;animation:shimmer 2s infinite}
 
+.quick-hero{background:linear-gradient(180deg,rgba(163,230,53,.06),transparent);border-bottom:1px solid var(--border);padding:20px 32px}
+.qh-inner{max-width:680px;margin:0 auto;text-align:center}
+.qh-label{font-family:var(--mono);font-size:11px;color:var(--lime);margin-bottom:12px;text-transform:uppercase;letter-spacing:.1em}
+.qh-row{display:flex;gap:8px}
+.qh-input{flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(163,230,53,.3);border-radius:10px;padding:13px 18px;font-size:14px;font-family:'DM Sans',sans-serif;color:#fff;outline:none}
+.qh-input::placeholder{color:var(--muted)}
+.qh-input:focus{border-color:var(--lime);background:rgba(163,230,53,.05)}
+.qh-btn{background:var(--lime);border:none;border-radius:10px;padding:13px 22px;font-size:14px;font-weight:700;color:#000;cursor:pointer;white-space:nowrap}
+.qh-btn:hover{background:var(--lime2)}
+.qh-or{font-size:12px;color:var(--muted2);margin-top:10px}
+.qh-demo{background:none;border:none;color:var(--lime);font-size:12px;cursor:pointer;text-decoration:underline;font-family:'DM Sans',sans-serif}
+.skeleton{background:linear-gradient(90deg,rgba(255,255,255,.04) 25%,rgba(255,255,255,.08) 50%,rgba(255,255,255,.04) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:18px;height:280px;border:1px solid var(--border)}
+.email-popup{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:300;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.email-popup-box{background:var(--bg2);border:1px solid rgba(163,230,53,.2);border-radius:20px;padding:32px;max-width:400px;width:90%;text-align:center}
+.email-popup-title{font-size:20px;font-weight:800;color:#fff;margin-bottom:8px}
+.email-popup-sub{font-size:13px;color:var(--muted2);margin-bottom:20px;line-height:1.6}
+.email-popup-input{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:11px 14px;font-size:13px;color:#fff;outline:none;margin-bottom:12px;font-family:'DM Sans',sans-serif}
+.email-popup-input:focus{border-color:rgba(163,230,53,.4)}
+.email-popup-skip{background:none;border:none;color:var(--muted2);font-size:12px;cursor:pointer;margin-top:8px;font-family:'DM Sans',sans-serif}
 footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.05em;position:relative;z-index:1}
 
 @media(max-width:960px){.hero{grid-template-columns:1fr}.market-panel{position:static}.steps-grid{grid-template-columns:repeat(2,1fr)}.founding-grid{grid-template-columns:1fr}}
