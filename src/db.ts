@@ -121,6 +121,8 @@ export async function setupDB(): Promise<void> {
   }
 
   console.log('[db] Schema ready');
+}
+
   export async function getActiveEventCount(email: string): Promise<number> {
   try {
     const r = await pool.query(
@@ -129,5 +131,4 @@ export async function setupDB(): Promise<void> {
     );
     return parseInt(r.rows[0].count, 10);
   } catch (_) { return 0; }
-}
 }
