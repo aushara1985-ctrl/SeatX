@@ -922,7 +922,7 @@ app.post('/api/subscribe', async (req, res) => {
     // Freemium limit check
     const { getActiveEventCount } = require('./db');
     const activeCount = await getActiveEventCount(email);
-    if (activeCount >= 3) {
+    if (activeCount >= 1) {
       return res.status(403).json({
         error: 'limit_reached',
         message: 'Free plan allows only 3 active events',
