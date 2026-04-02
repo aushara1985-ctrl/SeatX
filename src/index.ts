@@ -827,6 +827,61 @@ async function submitPopupEmail() {
   document.getElementById('email-popup')?.remove();
   location.reload();
 }
+async function quickAdd() {
+  const url = document.getElementById('qh-url').value.trim();
+  if (!url) { document.getElementById('qh-url').focus(); return; }
+  const btn = document.getElementById('qh-btn');
+  btn.textContent = 'Adding...'; btn.disabled = true;
+  const grid = document.getElementById('egrid');
+  if (grid) { const sk = document.createElement('div'); sk.className = 'skeleton'; sk.id = 'sk-temp'; grid.prepend(sk); }
+  try {
+    await fetch('/api/events', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({title: url.replace(/^https?:\/\//,'').split('/')[0], eventUrl: url}) });
+    showEmailPopup();
+    setTimeout(() => location.reload(), 3000);
+  } catch(e) {
+    btn.textContent = 'Start watching free →'; btn.disabled = false;
+    const sk = document.getElementById('sk-temp'); if (sk) sk.remove();
+  }
+}
+
+async function tryDemo() {
+  const btn = document.querySelector('.qh-demo');
+  if (btn) { btn.textContent = 'Adding...'; btn.disabled = true; }
+  const grid = document.getElementById('egrid');
+  if (grid) { const sk = document.createElement('div'); sk.className = 'skeleton'; sk.id = 'sk-demo'; grid.prepend(sk); }
+  try {
+    await fetch('/api/events', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({title: 'Al Nassr vs Al Hilal — Demo', eventUrl: 'https://www.ticketmaster.sa/'}) });
+    showEmailPopup();
+    setTimeout(() => location.reload(), 3000);
+  } catch(e) {
+    if (btn) { btn.textContent = 'try a demo event'; btn.disabled = false; }
+    const sk = document.getElementById('sk-demo'); if (sk) sk.remove();
+  }
+}
+
+function showEmailPopup() {
+  const popup = document.createElement('div');
+  popup.className = 'email-popup'; popup.id = 'email-popup';
+  popup.innerHTML = \`<div class="email-popup-box">
+    <div class="email-popup-title">⚡ Event added!</div>
+    <div class="email-popup-sub">Enter your email to get alerted the second seats become available.</div>
+    <input class="email-popup-input" id="popup-email" type="email" placeholder="your@email.com"/>
+    <button class="gbtn" style="width:100%;padding:11px" onclick="submitPopupEmail()">Get alerts →</button><br/>
+    <button class="email-popup-skip" onclick="document.getElementById('email-popup').remove()">Skip for now</button>
+  </div>\`;
+  document.body.appendChild(popup);
+  setTimeout(() => { const i = document.getElementById('popup-email'); if(i) i.focus(); }, 100);
+}
+
+async function submitPopupEmail() {
+  const email = document.getElementById('popup-email')?.value?.trim();
+  if (!email || !email.includes('@')) return;
+  if (EVENTS.length > 0) {
+    await fetch('/api/subscribe', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({eventId: EVENTS[0].id, email}) });
+  }
+  document.getElementById('email-popup')?.remove();
+  location.reload();
+}
 document.addEventListener('DOMContentLoaded', () => {
   setLang('en');
   initTimers();
