@@ -262,6 +262,23 @@ h1 em{color:var(--lime);font-style:normal;display:block}
 .email-popup-input{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:11px 14px;font-size:13px;color:#fff;outline:none;margin-bottom:12px;font-family:'DM Sans',sans-serif}
 .email-popup-input:focus{border-color:rgba(163,230,53,.4)}
 .email-popup-skip{background:none;border:none;color:var(--muted2);font-size:12px;cursor:pointer;margin-top:8px;font-family:'DM Sans',sans-serif}
+.pricing-grid{display:grid;grid-template-columns:1fr 1fr 1.3fr;gap:16px;align-items:start}
+.pricing-card{background:var(--bg2);border:1px solid var(--border);border-radius:18px;padding:24px;position:relative}
+.pricing-lifetime{border-color:rgba(163,230,53,.3);background:linear-gradient(135deg,rgba(163,230,53,.06),var(--bg2));padding:28px}
+.pc-badge{display:inline-block;background:var(--lime);color:#000;font-size:10px;font-weight:800;padding:3px 10px;border-radius:100px;margin-bottom:12px;font-family:var(--mono);text-transform:uppercase}
+.pc-name{font-size:12px;font-weight:700;color:var(--muted3);margin-bottom:8px;text-transform:uppercase;font-family:var(--mono);letter-spacing:.1em}
+.pc-price{font-size:44px;font-weight:900;color:#fff;font-family:'DM Sans',sans-serif;line-height:1}
+.pricing-lifetime .pc-price{color:var(--lime)}
+.pc-period{font-size:11px;color:var(--muted2);margin:4px 0 8px}
+.pc-sub{font-size:11px;color:var(--lime);margin-bottom:16px;font-weight:600;line-height:1.5}
+.pc-features{margin:16px 0;display:flex;flex-direction:column;gap:8px}
+.pc-f{font-size:12px;color:#d4d4d8;display:flex;align-items:center;gap:6px}
+.pc-f::before{content:'✓';color:var(--lime);font-weight:800;font-size:10px;flex-shrink:0}
+.pc-btn{width:100%;background:rgba(255,255,255,.06);border:1px solid var(--border2);border-radius:10px;padding:11px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;margin-top:8px;transition:all .2s}
+.pc-btn:hover{background:rgba(255,255,255,.1)}
+.pc-btn-lifetime{width:100%;background:var(--lime);border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:800;color:#000;cursor:pointer;margin-top:8px;transition:all .2s}
+.pc-btn-lifetime:hover{background:var(--lime2);transform:translateY(-1px)}
+@media(max-width:800px){.pricing-grid{grid-template-columns:1fr}}
 footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.05em;position:relative;z-index:1}
 
 @media(max-width:960px){.hero{grid-template-columns:1fr}.market-panel{position:static}.steps-grid{grid-template-columns:repeat(2,1fr)}.founding-grid{grid-template-columns:1fr}}
@@ -479,23 +496,6 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
 </div>
   </div>
 </div>
-.pricing-grid{display:grid;grid-template-columns:1fr 1fr 1.3fr;gap:16px;align-items:start}
-.pricing-card{background:var(--bg2);border:1px solid var(--border);border-radius:18px;padding:24px;position:relative}
-.pricing-lifetime{border-color:rgba(163,230,53,.3);background:linear-gradient(135deg,rgba(163,230,53,.06),var(--bg2));padding:28px}
-.pc-badge{display:inline-block;background:var(--lime);color:#000;font-size:10px;font-weight:800;padding:3px 10px;border-radius:100px;margin-bottom:12px;font-family:var(--mono);text-transform:uppercase}
-.pc-name{font-size:12px;font-weight:700;color:var(--muted3);margin-bottom:8px;text-transform:uppercase;font-family:var(--mono);letter-spacing:.1em}
-.pc-price{font-size:44px;font-weight:900;color:#fff;font-family:'DM Sans',sans-serif;line-height:1}
-.pricing-lifetime .pc-price{color:var(--lime)}
-.pc-period{font-size:11px;color:var(--muted2);margin:4px 0 8px}
-.pc-sub{font-size:11px;color:var(--lime);margin-bottom:16px;font-weight:600;line-height:1.5}
-.pc-features{margin:16px 0;display:flex;flex-direction:column;gap:8px}
-.pc-f{font-size:12px;color:#d4d4d8;display:flex;align-items:center;gap:6px}
-.pc-f::before{content:'✓';color:var(--lime);font-weight:800;font-size:10px;flex-shrink:0}
-.pc-btn{width:100%;background:rgba(255,255,255,.06);border:1px solid var(--border2);border-radius:10px;padding:11px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;margin-top:8px;transition:all .2s}
-.pc-btn:hover{background:rgba(255,255,255,.1)}
-.pc-btn-lifetime{width:100%;background:var(--lime);border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:800;color:#000;cursor:pointer;margin-top:8px;transition:all .2s}
-.pc-btn-lifetime:hover{background:var(--lime2);transform:translateY(-1px)}
-@media(max-width:800px){.pricing-grid{grid-template-columns:1fr}}
 <footer>© 2025 SEATX · BUILT FOR FANS · 🇸🇦 SAUDI ARABIA</footer>
 
 <script>
