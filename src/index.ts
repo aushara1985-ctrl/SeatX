@@ -1039,6 +1039,13 @@ app.post('/api/subscribe', async (req, res) => {
         await logActivity(eventId, 'watcher_added', `New watcher joined "${ev.rows[0].title}"`);
       }
     }
+    if (!inserted) {
+  return res.status(403).json({
+    error: 'limit_reached',
+    message: 'Track more events and get faster alerts',
+    upgrade: true
+  });
+}
     res.json({ success: true, inserted });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
