@@ -926,6 +926,8 @@ document.addEventListener('DOMContentLoaded', () => {
   setLang('en');
   initTimers();
   animateScoreBars();
+  const qhInput = document.getElementById('qh-url');
+  if (qhInput) qhInput.focus();
 });
 </script>
 </body>
