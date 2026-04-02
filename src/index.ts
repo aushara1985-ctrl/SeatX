@@ -31,6 +31,9 @@ function getHTML(events: any[], feed: any[]): string {
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>SeatX — The seat market, live.</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;0,9..40,900;1,9..40,400&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+.usage-meter{display:flex;align-items:center;justify-content:space-between;background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.15);border-radius:10px;padding:10px 16px;margin-bottom:16px}
+.um-text{font-size:13px;font-weight:600;color:#fb923c;font-family:var(--mono)}
+.um-upgrade{background:none;border:1px solid rgba(249,115,22,.3);border-radius:7px;padding:5px 12px;font-size:12px;color:#fb923c;cursor:pointer;font-family:'DM Sans',sans-serif}
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
