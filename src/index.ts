@@ -975,7 +975,7 @@ function renderEventCard(e: any): string {
     : '';
   const imgSection: string = e.hero_image
     ? '<div class="card-img"><img src="' + e.hero_image + '" alt="' + e.title + '" loading="lazy" onerror="this.parentNode.innerHTML=\'<div class=card-img-fallback><div class=card-img-icon>🎫</div></div>\'"/><div class="card-overlay"></div>' + sourcePart + '<div class="card-status-badge ' + statusClass + '">' + statusLabel + '</div></div>'
-    : '<div class="card-img"><div class="card-img-fallback"><div class="card-img-icon">🎫</div></div>' + sourcePart + '<div class="card-status-badge ' + statusClass + '">' + statusLabel + '</div></div>';
+   : '<div class="card-img" style="background:linear-gradient(135deg,#0d1117,#1a1f2e);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px">' + sourcePart + '<div style="font-size:11px;font-weight:700;color:rgba(163,230,53,.6);font-family:var(--mono);text-transform:uppercase;letter-spacing:.15em">LIVE EVENT</div><div style="font-size:15px;font-weight:800;color:#fff;text-align:center;padding:0 16px;line-height:1.3">' + e.title + '</div><div style="width:40px;height:2px;background:rgba(163,230,53,.4);border-radius:2px"></div><div class="card-status-badge ' + statusClass + '">' + statusLabel + '</div></div>';
 
   return '<div class="' + cardClass + '">'
     + imgSection
