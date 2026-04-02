@@ -761,6 +761,13 @@ async function addEvent(){
 async function subscribe(id, btnEl){
   const email = document.getElementById('em-'+id)?.value?.trim();
   if(!email||!email.includes('@')){ alert(lang==='ar'?'أدخل بريد صحيح':'Enter valid email'); return; }
+  const res = await fetch('/api/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({eventId:id,email})});
+const data = await res.json();
+if (data.upgrade) {
+  const grid = document.getElementById('egrid');
+  if(grid) grid.insertAdjacentHTML('beforeend', '<div class="upgrade-prompt"><div class="up-title">Track more events and get faster alerts</div><button class="pc-btn-lifetime" style="max-width:280px;margin:0 auto" onclick="document.querySelector(\'.pricing-grid\').scrollIntoView({behavior:\'smooth\'})">See plans →</button></div>');
+  return;
+}
   const btn = btnEl || document.querySelector(\`[onclick*="subscribe(\${id})"]\`);
   try {
     await fetch('/api/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({eventId:id,email})});
