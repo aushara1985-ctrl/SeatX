@@ -343,10 +343,7 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
       <button class="gbtn" id="hb1" onclick="scrollTo('add')">Start watching free</button>
       <button class="obtn" id="hb2" onclick="scrollTo('evs')">View live events ↓</button>
     </div>
-    .usage-meter{display:flex;align-items:center;justify-content:space-between;background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.15);border-radius:10px;padding:10px 16px;margin-bottom:16px}
-.um-text{font-size:13px;font-weight:600;color:#fb923c;font-family:var(--mono)}
-.um-upgrade{background:none;border:1px solid rgba(249,115,22,.3);border-radius:7px;padding:5px 12px;font-size:12px;color:#fb923c;cursor:pointer;font-family:'DM Sans',sans-serif}
-    <div class="stats-row">
+     <div class="stats-row">
       <div class="stat-block">
         <div class="stat-label" id="sl1">Watching now</div>
         <div class="stat-val" id="sv1">${events.reduce((a,e) => a+(e.watchers_count||0),0)}<span>live</span></div>
