@@ -283,6 +283,8 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
 
 @media(max-width:960px){.hero{grid-template-columns:1fr}.market-panel{position:static}.steps-grid{grid-template-columns:repeat(2,1fr)}.founding-grid{grid-template-columns:1fr}}
 @media(max-width:600px){.hero{padding:32px 16px 28px}.section{padding:0 16px 40px}nav{padding:0 16px}.events-grid{grid-template-columns:1fr}.steps-grid{grid-template-columns:1fr}}
+.upgrade-prompt{background:linear-gradient(135deg,rgba(163,230,53,.08),rgba(163,230,53,.03));border:1px solid rgba(163,230,53,.2);border-radius:18px;padding:32px;text-align:center;grid-column:1/-1}
+.up-title{font-size:18px;font-weight:700;color:#fff;margin-bottom:16px}
 </style>
 </head>
 <body class="en">
