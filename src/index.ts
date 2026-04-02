@@ -285,6 +285,9 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
 @media(max-width:600px){.hero{padding:32px 16px 28px}.section{padding:0 16px 40px}nav{padding:0 16px}.events-grid{grid-template-columns:1fr}.steps-grid{grid-template-columns:1fr}}
 .upgrade-prompt{background:linear-gradient(135deg,rgba(163,230,53,.08),rgba(163,230,53,.03));border:1px solid rgba(163,230,53,.2);border-radius:18px;padding:32px;text-align:center;grid-column:1/-1}
 .up-title{font-size:18px;font-weight:700;color:#fff;margin-bottom:16px}
+.usage-meter{display:flex;align-items:center;justify-content:space-between;background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.15);border-radius:10px;padding:10px 16px;margin-bottom:16px}
+.um-text{font-size:13px;font-weight:600;color:#fb923c;font-family:var(--mono)}
+.um-upgrade{background:none;border:1px solid rgba(249,115,22,.3);border-radius:7px;padding:5px 12px;font-size:12px;color:#fb923c;cursor:pointer;font-family:'DM Sans',sans-serif}
 </style>
 </head>
 <body class="en">
