@@ -434,28 +434,68 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
 </div>
 
 <div class="section">
-  <div class="founding-wrap">
-    <div class="founding-grid">
-      <div>
-        <div class="eyebrow-pill"><div class="pulse-dot"></div><span id="fob">Founding launch</span></div>
-        <h2 style="font-size:clamp(24px,3vw,40px);font-weight:900;color:#fff;letter-spacing:-.03em;margin:14px 0 10px" id="fot">First 1,000 members get lifetime access.</h2>
-        <p style="font-size:15px;line-height:1.8;color:var(--muted2);max-width:440px" id="fos">Lock in before the price goes up. Get email + Telegram alerts for life.</p>
-        <button class="gbtn" style="margin-top:20px;padding:11px 22px;font-size:14px" id="fobtn">Learn more</button>
+  <div class="section-eyebrow" style="text-align:center;margin-bottom:8px">Simple pricing</div>
+  <div class="section-title" style="text-align:center;margin-bottom:8px">Pick your speed</div>
+  <p style="text-align:center;font-size:13px;color:var(--muted2);margin-bottom:32px">Start free. Upgrade when you need more speed.</p>
+  <div class="pricing-grid">
+    <div class="pricing-card">
+      <div class="pc-name">Entry</div>
+      <div class="pc-price">$9</div>
+      <div class="pc-period">per month</div>
+      <div class="pc-features">
+        <div class="pc-f">5 active events</div>
+        <div class="pc-f">Faster alerts (30s)</div>
+        <div class="pc-f">Medium priority</div>
       </div>
-      <div class="founding-card">
-        <div style="font-size:13px;font-weight:700;color:#fff" id="foct">Founding Pass</div>
-        <div class="founding-price">$199</div>
-        <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:14px" id="focs">One-time · First 1,000 only</div>
-        <div class="founding-feature" id="ff1">3 lifetime seat alerts</div>
-        <div class="founding-feature" id="ff2">Email + Telegram</div>
-        <div class="founding-feature" id="ff3">Founding badge</div>
-        <div class="founding-feature" id="ff4">Early access to live seat feed</div>
-        <button class="gbtn" style="width:100%;margin-top:16px;padding:11px" id="focl">Claim Founding Pass</button>
+      <button class="pc-btn">Get Entry</button>
+    </div>
+    <div class="pricing-card">
+      <div class="pc-name">Pro</div>
+      <div class="pc-price">$19</div>
+      <div class="pc-period">per month</div>
+      <div class="pc-features">
+        <div class="pc-f">15 active events</div>
+        <div class="pc-f">Fast alerts</div>
+        <div class="pc-f">Priority monitoring</div>
+        <div class="pc-f">Full demand intelligence</div>
       </div>
+      <button class="pc-btn">Get Pro</button>
+    </div>
+    <div class="pricing-card pricing-lifetime">
+      <div class="pc-badge">Best Value</div>
+      <div class="pc-name">Lifetime</div>
+      <div class="pc-price">$199</div>
+      <div class="pc-period">one-time</div>
+      <div class="pc-sub">Pay once. Use forever. Less than 11 months of Pro.</div>
+      <div class="pc-features">
+        <div class="pc-f">30 active events</div>
+        <div class="pc-f">Fastest alerts</div>
+        <div class="pc-f">Highest priority</div>
+        <div class="pc-f">All future features</div>
+      </div>
+      <button class="pc-btn-lifetime">Claim Lifetime →</button>
     </div>
   </div>
 </div>
-
+  </div>
+</div>
+.pricing-grid{display:grid;grid-template-columns:1fr 1fr 1.3fr;gap:16px;align-items:start}
+.pricing-card{background:var(--bg2);border:1px solid var(--border);border-radius:18px;padding:24px;position:relative}
+.pricing-lifetime{border-color:rgba(163,230,53,.3);background:linear-gradient(135deg,rgba(163,230,53,.06),var(--bg2));padding:28px}
+.pc-badge{display:inline-block;background:var(--lime);color:#000;font-size:10px;font-weight:800;padding:3px 10px;border-radius:100px;margin-bottom:12px;font-family:var(--mono);text-transform:uppercase}
+.pc-name{font-size:12px;font-weight:700;color:var(--muted3);margin-bottom:8px;text-transform:uppercase;font-family:var(--mono);letter-spacing:.1em}
+.pc-price{font-size:44px;font-weight:900;color:#fff;font-family:'DM Sans',sans-serif;line-height:1}
+.pricing-lifetime .pc-price{color:var(--lime)}
+.pc-period{font-size:11px;color:var(--muted2);margin:4px 0 8px}
+.pc-sub{font-size:11px;color:var(--lime);margin-bottom:16px;font-weight:600;line-height:1.5}
+.pc-features{margin:16px 0;display:flex;flex-direction:column;gap:8px}
+.pc-f{font-size:12px;color:#d4d4d8;display:flex;align-items:center;gap:6px}
+.pc-f::before{content:'✓';color:var(--lime);font-weight:800;font-size:10px;flex-shrink:0}
+.pc-btn{width:100%;background:rgba(255,255,255,.06);border:1px solid var(--border2);border-radius:10px;padding:11px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;margin-top:8px;transition:all .2s}
+.pc-btn:hover{background:rgba(255,255,255,.1)}
+.pc-btn-lifetime{width:100%;background:var(--lime);border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:800;color:#000;cursor:pointer;margin-top:8px;transition:all .2s}
+.pc-btn-lifetime:hover{background:var(--lime2);transform:translateY(-1px)}
+@media(max-width:800px){.pricing-grid{grid-template-columns:1fr}}
 <footer>© 2025 SEATX · BUILT FOR FANS · 🇸🇦 SAUDI ARABIA</footer>
 
 <script>
