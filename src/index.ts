@@ -485,7 +485,6 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
     </div>
     <div class="pricing-card pricing-lifetime">
       <div class="pc-badge">Best Value</div>
-    <div class="pc-badge">Best Value</div>
 <div class="pc-name">Never miss again</div>
 <div class="pc-price">$199</div>
 <div class="pc-period">one-time</div>
