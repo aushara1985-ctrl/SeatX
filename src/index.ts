@@ -459,6 +459,7 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
   <div class="section-title" style="text-align:center;margin-bottom:8px">Be first. Or be late.</div>
   <div class="section-title" style="text-align:center;margin-bottom:8px">Pick your speed</div>
   <p style="text-align:center;font-size:13px;color:var(--muted2);margin-bottom:32px">Start free. Upgrade when you need more speed.</p>
+  <p style="text-align:center;font-size:13px;color:#fb923c;margin-bottom:24px;font-weight:600">⚡ Tickets appear and disappear in seconds</p>
   <div class="pricing-grid">
     <div class="pricing-card">
       <div class="pc-name">Entry</div>
