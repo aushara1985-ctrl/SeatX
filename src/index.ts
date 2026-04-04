@@ -305,7 +305,7 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
       <button class="lb on" onclick="setLang('en')">EN</button>
       <button class="lb" onclick="setLang('ar')">AR</button>
     </div>
-    <button class="obtn" id="n-si">Sign in</button>
+    <button class="obtn" id="n-si" onclick="showEmailPopup()">Sign in</button>
     <button class="gbtn" id="n-st" onclick="scrollTo('add')">Start watching</button>
   </div>
 </nav>
