@@ -497,16 +497,6 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
   <div class="pc-f">All future features included</div>
 </div>
 <button class="pc-btn-lifetime">Never miss again — $199</button>
-      <div class="pc-price">$199</div>
-      <div class="pc-period">one-time</div>
-      <div class="pc-sub">Pay once. Use forever. Less than 11 months of Pro.</div>
-      <div class="pc-features">
-        <div class="pc-f">30 active events</div>
-        <div class="pc-f">Fastest alerts</div>
-        <div class="pc-f">Highest priority</div>
-        <div class="pc-f">All future features</div>
-      </div>
-      <button class="pc-btn-lifetime">Claim Lifetime →</button>
     </div>
   </div>
 </div>
