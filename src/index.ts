@@ -1108,7 +1108,7 @@ ${e.hero_image ? `<meta property="og:image" content="${e.hero_image}"/>` : ''}
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#080a0e;color:#f4f4f5;font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
-.card{background:#0d1018;border:1px solid rgba(255,255,255,.07);border-radius:24px;max-width:480px;width:100%;overflow:hidden}
+.card{position:relative;background:#0d1018;border:1px solid rgba(255,255,255,.07);border-radius:24px;max-width:480px;width:100%;overflow:hidden}
 .card-img{height:200px;background:linear-gradient(135deg,#0d1117,#1a1f2e);display:flex;align-items:center;justify-content:center;position:relative}
 .card-img img{width:100%;height:100%;object-fit:cover}
 .card-body{padding:24px}
