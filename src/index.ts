@@ -462,7 +462,15 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
   <p style="text-align:center;font-size:13px;color:#fb923c;margin-bottom:24px;font-weight:600">⚡ Tickets appear and disappear in seconds</p>
   <div class="pricing-grid">
     <div class="pricing-card">
-      <div class="pc-name">Entry</div>
+      <div class="pc-name">Start getting ahead</div>
+<div class="pc-price">$9</div>
+<div class="pc-period">per month</div>
+<div class="pc-features">
+  <div class="pc-f">Faster than free users</div>
+  <div class="pc-f">Track multiple events at once</div>
+  <div class="pc-f">Stop missing easy drops</div>
+</div>
+<button class="pc-btn">Get ahead — $9</button>
       <div class="pc-price">$9</div>
       <div class="pc-period">per month</div>
       <div class="pc-features">
@@ -473,16 +481,15 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
       <button class="pc-btn">Get Entry</button>
     </div>
     <div class="pricing-card">
-      <div class="pc-name">Pro</div>
-      <div class="pc-price">$19</div>
-      <div class="pc-period">per month</div>
-      <div class="pc-features">
-        <div class="pc-f">15 active events</div>
-        <div class="pc-f">Fast alerts</div>
-        <div class="pc-f">Priority monitoring</div>
-        <div class="pc-f">Full demand intelligence</div>
-      </div>
-      <button class="pc-btn">Get Pro</button>
+     <div class="pc-name">Be first every time</div>
+<div class="pc-price">$19</div>
+<div class="pc-period">per month</div>
+<div class="pc-features">
+  <div class="pc-f">Instant alerts</div>
+  <div class="pc-f">Priority monitoring</div>
+  <div class="pc-f">Designed for serious buyers</div>
+</div>
+<button class="pc-btn">Go Pro — $19</button>
     </div>
     <div class="pricing-card pricing-lifetime">
       <div class="pc-badge">Best Value</div>
