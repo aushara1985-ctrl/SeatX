@@ -1109,6 +1109,7 @@ ${e.hero_image ? `<meta property="og:image" content="${e.hero_image}"/>` : ''}
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#080a0e;color:#f4f4f5;font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
 .card{position:relative;background:#0d1018;border:1px solid rgba(255,255,255,.07);border-radius:24px;max-width:480px;width:100%;overflow:hidden}
+.card-share-btn{position:absolute;top:12px;right:12px;background:rgba(163,230,53,.15);color:#a3e635;border:1px solid rgba(163,230,53,.3);border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;z-index:10}.card-share-btn:hover{background:rgba(163,230,53,.25)}
 .card-img{height:200px;background:linear-gradient(135deg,#0d1117,#1a1f2e);display:flex;align-items:center;justify-content:center;position:relative}
 .card-img img{width:100%;height:100%;object-fit:cover}
 .card-body{padding:24px}
