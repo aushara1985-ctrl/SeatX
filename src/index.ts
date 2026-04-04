@@ -1082,6 +1082,70 @@ app.get('/api/events', async (req, res) => {
   }
 });
 
+app.get('/event/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const r = await pool.query('SELECT * FROM events WHERE id=$1', [id]);
+    if (!r.rows[0]) return res.status(404).send('Event not found');
+    const e = r.rows[0];
+    const band = e.demand_band || 'low';
+    const demandColor = band === 'very_high' ? '#ef4444' : band === 'high' ? '#f97316' : band === 'medium' ? '#eab308' : '#a3e635';
+    const demandLabel = band === 'very_high' ? '🔥 On Fire' : band === 'high' ? '⚡ High Demand' : band === 'medium' ? '👀 Picking Up' : '○ Watching';
+    const statusLabel = e.status === 'available' ? '⚡ Available' : e.status === 'maybe_available' ? '👀 Maybe Available' : '○ Monitoring';
+
+    res.setHeader('Content-Type', 'text/html');
+    res.end(`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>${e.title} — SeatX</title>
+<meta property="og:title" content="${e.title} — SeatX"/>
+<meta property="og:description" content="${e.watchers_count || 0} people watching. ${demandLabel}"/>
+${e.hero_image ? `<meta property="og:image" content="${e.hero_image}"/>` : ''}
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#080a0e;color:#f4f4f5;font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+.card{background:#0d1018;border:1px solid rgba(255,255,255,.07);border-radius:24px;max-width:480px;width:100%;overflow:hidden}
+.card-img{height:200px;background:linear-gradient(135deg,#0d1117,#1a1f2e);display:flex;align-items:center;justify-content:center;position:relative}
+.card-img img{width:100%;height:100%;object-fit:cover}
+.card-body{padding:24px}
+.brand{font-size:11px;font-weight:700;color:#a3e635;letter-spacing:.15em;text-transform:uppercase;margin-bottom:16px}
+.title{font-size:24px;font-weight:900;color:#fff;margin-bottom:8px;line-height:1.2}
+.status{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:100px;font-size:12px;font-weight:700;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#a1a1aa;margin-bottom:16px}
+.meta{display:flex;gap:16px;margin-bottom:20px}
+.meta-item{font-size:13px;color:#71717a}
+.meta-item strong{color:#fff;font-weight:700}
+.demand{font-size:14px;font-weight:700;margin-bottom:20px}
+.cta{display:block;background:#a3e635;color:#000;font-weight:800;font-size:15px;padding:14px;border-radius:12px;text-align:center;text-decoration:none;margin-bottom:12px}
+.cta:hover{background:#bef264}
+.sub{font-size:12px;color:#52525b;text-align:center}
+</style>
+</head>
+<body>
+<div class="card">
+  ${e.hero_image ? `<div class="card-img"><img src="${e.hero_image}" alt="${e.title}"/></div>` : `<div class="card-img"><div style="text-align:center"><div style="font-size:12px;font-weight:700;color:rgba(163,230,53,.6);letter-spacing:.15em;text-transform:uppercase;margin-bottom:8px">LIVE EVENT</div><div style="font-size:18px;font-weight:800;color:#fff">${e.title}</div></div></div>`}
+  <div class="card-body">
+    <div class="brand">SEATX · Live Intelligence</div>
+    <div class="title">${e.title}</div>
+    <div class="status">${statusLabel}</div>
+    <div class="meta">
+      <div class="meta-item">👥 <strong>${e.watchers_count || 0}</strong> watching</div>
+      <div class="meta-item">📊 Demand: <strong style="color:${demandColor}">${demandLabel}</strong></div>
+    </div>
+    ${e.event_date ? `<div class="meta-item" style="margin-bottom:12px">📅 ${e.event_date}</div>` : ''}
+    ${e.location ? `<div class="meta-item" style="margin-bottom:16px">📍 ${e.location}</div>` : ''}
+    <a class="cta" href="https://seatx-production.up.railway.app">Get alerted when seats appear →</a>
+    <div class="sub">Free · No account needed · Real-time alerts</div>
+  </div>
+</div>
+</body>
+</html>`);
+  } catch (e: any) {
+    res.status(500).send('Error');
+  }
+});
 const PORT = parseInt(process.env.PORT || '3000');
 app.listen(PORT, async () => {
   await setupDB();
