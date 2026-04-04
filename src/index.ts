@@ -1121,6 +1121,11 @@ body{background:#080a0e;color:#f4f4f5;font-family:'DM Sans',sans-serif;min-heigh
 .cta{display:block;background:#a3e635;color:#000;font-weight:800;font-size:15px;padding:14px;border-radius:12px;text-align:center;text-decoration:none;margin-bottom:12px}
 .cta:hover{background:#bef264}
 .sub{font-size:12px;color:#52525b;text-align:center}
+.share-row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.share-btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none;border:none;cursor:pointer;flex:1}
+.share-btn.whatsapp{background:#25d366;color:#000}
+.share-btn.twitter{background:#000;color:#fff;border:1px solid rgba(255,255,255,.15)}
+.share-btn.copy{background:rgba(255,255,255,.08);color:#fff}
 </style>
 </head>
 <body>
@@ -1137,7 +1142,12 @@ body{background:#080a0e;color:#f4f4f5;font-family:'DM Sans',sans-serif;min-heigh
     ${e.event_date ? `<div class="meta-item" style="margin-bottom:12px">📅 ${e.event_date}</div>` : ''}
     ${e.location ? `<div class="meta-item" style="margin-bottom:16px">📍 ${e.location}</div>` : ''}
     <a class="cta" href="https://seatx-production.up.railway.app">Get alerted when seats appear →</a>
-    <div class="sub">Free · No account needed · Real-time alerts</div>
+<div class="share-row">
+  <a class="share-btn whatsapp" href="https://wa.me/?text=Check%20this%20on%20SeatX%3A%20https%3A%2F%2Fseatx-production.up.railway.app%2Fevent%2F${e.id}" target="_blank">واتساب</a>
+  <a class="share-btn twitter" href="https://twitter.com/intent/tweet?text=Check%20this%20on%20SeatX%3A%20https%3A%2F%2Fseatx-production.up.railway.app%2Fevent%2F${e.id}" target="_blank">تويتر</a>
+  <button class="share-btn copy" onclick="navigator.clipboard.writeText(window.location.href);this.textContent='✓ Copied!'">نسخ الرابط</button>
+</div>
+<div class="sub">Free · No account needed · Real-time alerts</div>
   </div>
 </div>
 </body>
