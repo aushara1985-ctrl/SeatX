@@ -493,7 +493,18 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
     </div>
     <div class="pricing-card pricing-lifetime">
       <div class="pc-badge">Best Value</div>
-      <div class="pc-name">Lifetime</div>
+    <div class="pc-badge">Best Value</div>
+<div class="pc-name">Never miss again</div>
+<div class="pc-price">$199</div>
+<div class="pc-period">one-time</div>
+<div class="pc-sub">You only need this once. Miss one important event… this pays for itself.</div>
+<div class="pc-features">
+  <div class="pc-f">Fastest alerts possible</div>
+  <div class="pc-f">Highest priority access</div>
+  <div class="pc-f">Track everything you care about</div>
+  <div class="pc-f">All future features included</div>
+</div>
+<button class="pc-btn-lifetime">Never miss again — $199</button>
       <div class="pc-price">$199</div>
       <div class="pc-period">one-time</div>
       <div class="pc-sub">Pay once. Use forever. Less than 11 months of Pro.</div>
