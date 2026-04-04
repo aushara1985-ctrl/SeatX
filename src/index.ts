@@ -991,6 +991,7 @@ function renderEventCard(e: any): string {
     + '<div class="card-score-row"><div class="score-track"><div class="score-fill" data-score="' + score + '" style="width:0%;background:' + scoreColor + '"></div></div><div class="score-val">' + score + '</div></div>'
     + '<div class="card-check-row"><div class="check-label"><div class="check-dot"></div><span class="cdl">Next check</span></div><div class="check-timer cdv">0:15</div></div>'
     + '<div class="card-sub-row"><input class="card-email" id="em-' + e.id + '" placeholder="your@email.com" type="email"/><button class="card-alert-btn" onclick="subscribe(' + e.id + ',this)">Get Alert</button></div>'
+    + '<div class="card-share-btn" onclick="event.stopPropagation();window.open(\'https://seatx-production.up.railway.app/event/' + e.id + '\',\'_blank\')">⬆ Share</div>'
     + '<div class="card-share-btn" onclick="event.stopPropagation();window.open(\'https://seatx-production.up.railway.app/event/' + e.id + '\',\'_blank\')" title="Share">⬆ Share</div>'
     + '</div>'
     + '</div>';
