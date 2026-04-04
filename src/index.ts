@@ -456,7 +456,7 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
 </div>
 
 <div class="section">
-  <div class="section-eyebrow" style="text-align:center;margin-bottom:8px">Simple pricing</div>
+  <div class="section-title" style="text-align:center;margin-bottom:8px">Be first. Or be late.</div>
   <div class="section-title" style="text-align:center;margin-bottom:8px">Pick your speed</div>
   <p style="text-align:center;font-size:13px;color:var(--muted2);margin-bottom:32px">Start free. Upgrade when you need more speed.</p>
   <div class="pricing-grid">
