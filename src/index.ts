@@ -496,8 +496,8 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
 <section class="hero">
   <div class="hero-left">
     <div class="eyebrow-pill"><div class="pulse-dot"></div><span id="ep">Saudi seat market · Live</span></div>
-    <h1><span id="hm">The seat market,</span><em id="ha">live.</em></h1>
-    <p class="hero-sub" id="hs">Track hot events, watch demand move in real time, and get alerted the second seats return — before everyone else.</p>
+    <h1><span id="hm">اعرف قبل</span><em id="ha">ما تطير المقاعد.</em></h1>
+    <p class="hero-sub" id="hs">ذكاء سوق مباشر لتذاكر المباريات والحفلات والفعاليات في السعودية. نراقب كل حركة عشان تمسك التذاكر لحظة رجوعها — قبل أي شخص ثاني.</p>
     <div class="hero-btns">
       <button class="gbtn" id="hb1" onclick="scrollTo('add')">Start watching free</button>
       <button class="obtn" id="hb2" onclick="scrollTo('evs')">View live events ↓</button>
@@ -674,8 +674,8 @@ const T = {
     qhOr: 'or ', qhDemo: 'try a demo event',
     qhPlaceholder: 'Paste ticket link here...',
     ep: 'Saudi seat market · Live',
-    hm: 'The seat market,', ha: 'live.',
-    hs: 'Track hot events, watch demand move in real time, and get alerted the second seats return — before everyone else.',
+    hm: 'Know before', ha: 'seats vanish.',
+    hs: 'Real-time demand intelligence for Saudi sports, concerts, and events. We watch every move so you catch tickets the second they return — before everyone else.',
     hb1: 'Start watching free', hb2: 'View live events ↓',
     sl1: 'Watching now', sl2: 'Check speed', sl3: 'Events live',
     mpt: 'Live seat market', mps: 'Updating every few seconds',
@@ -731,8 +731,8 @@ const T = {
     qhOr: 'أو ', qhDemo: 'جرّب فعالية تجريبية',
     qhPlaceholder: 'الصق رابط التذاكر هنا...',
     ep: 'سوق المقاعد السعودي · مباشر',
-    hm: 'سوق المقاعد،', ha: 'مباشر.',
-    hs: 'تابع الفعاليات المباعة، راقب حركة الطلب فوراً، وخلك أول من يعرف قبل الجميع.',
+    hm: 'اعرف قبل', ha: 'ما تطير المقاعد.',
+    hs: 'ذكاء سوق مباشر لتذاكر المباريات والحفلات والفعاليات في السعودية. نراقب كل حركة عشان تمسك التذاكر لحظة رجوعها — قبل أي شخص ثاني.',
     hb1: 'ابدأ المتابعة مجاناً', hb2: 'شوف الفعاليات ↓',
     sl1: 'يتابعون الآن', sl2: 'سرعة الفحص', sl3: 'فعاليات مباشرة',
     mpt: 'السوق المباشر', mps: 'يتحدث كل ثوانٍ',
