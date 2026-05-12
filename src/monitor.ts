@@ -110,7 +110,7 @@ export async function checkEvent(ev: Event): Promise<void> {
          WHERE id = $4`,
         [meta.heroImage, meta.eventDate, meta.location, ev.id]
       );
-      await logActivity(ev.id, 'metadata_updated', `Metadata refreshed for "${ev.title}"`);
+      await logActivity(ev.id, 'metadata_updated', `🎫 ${ev.title} — معلومات الفعالية محدّثة`);
     }
 
     // Compute advanced confidence
@@ -138,14 +138,16 @@ export async function checkEvent(ev: Event): Promise<void> {
     let finalSignals = signals;
     let finalConfidence = confidenceResult;
 
-    // Smart recheck for borderline confidence
+    // Smart recheck for borderline confidence. We deliberately do NOT log
+    // recheck attempts to the public activity feed — they read like debug
+    // chatter. Only the *final* confirmed transition reaches the feed below.
     if (confidenceResult.shouldRecheck) {
-      await logActivity(ev.id, 'status_change', `Recheck triggered for "${ev.title}" (confidence: ${confidenceResult.score})`);
+      console.log(`[monitor] recheck triggered for event ${ev.id} "${ev.title}" (confidence ${confidenceResult.score})`);
       const recheck = await recheckEvent(ev.event_url, parser);
       if (recheck) {
         finalSignals = recheck;
         finalConfidence = await computeConfidence(recheck, source.sourceName);
-        await logActivity(ev.id, 'status_change', `Recheck result: ${recheck.status} (confidence: ${finalConfidence.score})`);
+        console.log(`[monitor] recheck result for event ${ev.id}: ${recheck.status} (confidence ${finalConfidence.score})`);
       } else {
         return;
       }
@@ -182,10 +184,25 @@ export async function checkEvent(ev: Event): Promise<void> {
     );
 
     if (finalSignals.status !== ev.status) {
-      await logActivity(
-        ev.id, 'status_change',
-        `${ev.title}: ${ev.status} → ${finalSignals.status} (confidence: ${finalConfidence.score})`
-      );
+      // Saudi-flavored, market-feel transition strings — direction-aware.
+      // 'available' coming online is the headline event; the reverse direction
+      // and "maybe" transitions get softer copy so the feed feels alive
+      // without crying wolf.
+      const nowStatus = finalSignals.status;
+      const wasStatus = ev.status;
+      let transitionMsg: string;
+      if (nowStatus === 'available' && wasStatus !== 'available') {
+        transitionMsg = `🎟 ${ev.title} — مقاعد رجعت الآن!`;
+      } else if (nowStatus === 'maybe_available' && wasStatus === 'unavailable') {
+        transitionMsg = `👀 ${ev.title} — حركة في السوق، احتمال يرجعون قريب`;
+      } else if (nowStatus === 'unavailable' && wasStatus === 'available') {
+        transitionMsg = `🚨 ${ev.title} — انباعوا بسرعة، اكتملت المقاعد`;
+      } else if (nowStatus === 'unavailable' && wasStatus === 'maybe_available') {
+        transitionMsg = `❌ ${ev.title} — السوق هدأ، المقاعد ما رجعت`;
+      } else {
+        transitionMsg = `📊 ${ev.title} — تغيّر في حالة المقاعد`;
+      }
+      await logActivity(ev.id, 'status_change', transitionMsg);
     }
 
     if (trigger) {
@@ -200,7 +217,11 @@ export async function checkEvent(ev: Event): Promise<void> {
           recipientEmail: sub.email,
         });
       }
-      await logActivity(ev.id, 'alert_sent', `Alert sent to ${subs.rows.length} subscribers — ${finalSignals.status}`);
+      await logActivity(
+        ev.id,
+        'alert_sent',
+        `🔥 ${ev.title} — ${subs.rows.length} ${subs.rows.length === 1 ? 'مستخدم' : 'مستخدم'} وصلهم تنبيه لحظي`
+      );
 
       // Record signal outcome for learning
       await recordSignalOutcome(

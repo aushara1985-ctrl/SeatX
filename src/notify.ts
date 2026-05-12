@@ -73,6 +73,13 @@ function pushBody(payload: AlertPayload): string {
 async function sendEmailAlert(payload: AlertPayload): Promise<void> {
   if (!process.env.RESEND_API_KEY) return;
 
+  // RESEND_FROM / RESEND_FROM_NAME let us swap to a verified custom domain
+  // (e.g. alerts@seatx.space) once DNS is set up, without code changes.
+  // Falls back to Resend's test domain so the app still works pre-verification.
+  const fromAddr = process.env.RESEND_FROM || 'onboarding@resend.dev';
+  const fromName = process.env.RESEND_FROM_NAME || 'SeatX';
+  const fromHeader = `${fromName} <${fromAddr}>`;
+
   const { eventTitle, status, detectedSignals, url, recipientEmail } = payload;
   const statusLabel = status === 'available' ? '⚡ متاحة الآن' : '👀 ربما متاحة';
 
@@ -97,7 +104,7 @@ async function sendEmailAlert(payload: AlertPayload): Promise<void> {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'SeatX <onboarding@resend.dev>',
+        from: fromHeader,
         to: recipientEmail,
         subject: `${statusLabel} — ${eventTitle}`,
         html,

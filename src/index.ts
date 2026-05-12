@@ -162,7 +162,7 @@ function getHTML(events: any[], feed: any[]): string {
   const fj = JSON.stringify(feed).replace(/</g, '\\u003c');
 
   return `<!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
@@ -384,10 +384,73 @@ h1 em{color:var(--lime);font-style:normal;display:block}
 footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.05em;position:relative;z-index:1}
 .ar footer{font-family:'IBM Plex Sans Arabic',sans-serif;letter-spacing:0}
 @media(max-width:960px){.hero{grid-template-columns:1fr;padding:40px 24px 32px;gap:32px}.market-panel{position:static}.steps-grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:600px){.hero{padding:32px 16px 24px}.section{padding:0 16px 40px}nav{padding:0 16px}.events-grid{grid-template-columns:1fr}.steps-grid{grid-template-columns:1fr}.quick-hero{padding:16px}.qh-row{flex-direction:column}.stats-row{flex-wrap:wrap}.stat-block{min-width:50%}.nav-r .obtn{display:none}}
+@media(max-width:600px){
+  /* Layout */
+  .hero{padding:32px 16px 24px}
+  .section{padding:0 16px 40px}
+  nav{padding:0 16px;height:60px}
+  .events-grid{grid-template-columns:1fr}
+  .steps-grid{grid-template-columns:1fr}
+  .quick-hero{padding:22px 16px}
+  .qh-row{flex-direction:column;gap:10px}
+  .stats-row{flex-wrap:wrap}
+  .stat-block{min-width:50%;padding:16px 18px}
+  .nav-r .obtn{display:none}
+  /* Typography +30% bump for thumb readability */
+  .qh-label{font-size:12px;margin-bottom:14px;letter-spacing:.08em}
+  .qh-input{padding:15px 18px;font-size:16px}
+  .qh-btn{padding:15px 22px;font-size:15px;font-weight:800}
+  .qh-or{font-size:13px;margin-top:14px}
+  .qh-demo{font-size:13px}
+  .hero-sub{font-size:17px;line-height:1.75}
+  .hero-btns{gap:12px;flex-direction:column}
+  .hero-btns .gbtn,.hero-btns .obtn{padding:15px 24px;font-size:15px;border-radius:12px;width:100%}
+  .stat-label{font-size:10px}
+  .stat-val{font-size:24px}
+  .mp-title{font-size:14px}
+  .mp-sub{font-size:12px}
+  .feed-item{font-size:13px;padding:11px 14px;line-height:1.6}
+  .mp-hot-title{font-size:18px}
+  .mp-hot-meta{font-size:12px}
+  .section-title{font-size:24px;letter-spacing:-.02em}
+  .section-eyebrow{font-size:11px}
+  .form-title{font-size:17px}
+  .form-sub{font-size:14px;line-height:1.6}
+  .form-input{padding:13px 16px;font-size:16px}
+  .form-label{font-size:10px}
+  /* Cards */
+  .card-title{font-size:17px;line-height:1.3}
+  .card-url{font-size:11px}
+  .card-demand-tag{font-size:12px;padding:4px 11px}
+  .card-watchers{font-size:11px}
+  .card-fomo{font-size:12.5px;margin-bottom:10px}
+  .card-status-badge{font-size:11px;padding:4px 11px}
+  .card-alert-btn{padding:11px 16px;font-size:13px}
+  .card-share-btn{padding:11px 13px;font-size:16px;min-width:44px}
+  .card-email{padding:11px 14px;font-size:15px}
+  .card-img{height:160px}
+  .card-body{padding:18px}
+  /* Steps */
+  .step-card{padding:24px}
+  .step-title{font-size:17px}
+  .step-desc{font-size:13.5px;line-height:1.8}
+  /* Pricing */
+  .pc-name{font-size:13px}
+  .pc-price{font-size:48px}
+  .pc-period{font-size:13px}
+  .pc-sub{font-size:13px;line-height:1.6}
+  .pc-f{font-size:14px;line-height:1.5}
+  .pc-btn,.pc-btn-lifetime{padding:14px;font-size:15px;border-radius:12px}
+  .pricing-card{padding:24px}
+  .pricing-lifetime{padding:28px}
+  /* Modals */
+  .modal-title{font-size:22px}
+  .modal-sub{font-size:14px;line-height:1.65}
+  .modal-input{padding:13px 16px;font-size:16px}
+}
 </style>
 </head>
-<body class="en">
+<body class="ar">
 <div class="toast-container" id="tc"></div>
 
 <nav>
@@ -397,11 +460,11 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
   </a>
   <div class="nav-r">
     <div class="ltog">
-      <button class="lb on" onclick="setLang('en')">EN</button>
-      <button class="lb" onclick="setLang('ar')">AR</button>
+      <button class="lb" onclick="setLang('en')">EN</button>
+      <button class="lb on" onclick="setLang('ar')">AR</button>
     </div>
-    <button class="obtn" id="n-si" onclick="openMyAlerts()">My Alerts</button>
-    <button class="gbtn" id="n-st" onclick="scrollTo('add')">Start watching</button>
+    <button class="obtn" id="n-si" onclick="openMyAlerts()">تنبيهاتي</button>
+    <button class="gbtn" id="n-st" onclick="scrollTo('add')">ابدأ المتابعة</button>
   </div>
 </nav>
 
@@ -421,10 +484,12 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
     ${[...Array(2)].map(() => (feed.slice(0, 8).map((f: any) =>
       `<div class="ticker-item ${f.type === 'alert_sent' ? 'alert' : f.type === 'status_change' ? 'hot' : ''}">${escapeHtml(f.message || '')}</div>`
     ).join(''))).join('')}
-    <div class="ticker-item hot">⚡ SeatX — Real-time seat intelligence</div>
-    <div class="ticker-item alert">🔥 ${events.length} events tracked live</div>
-    <div class="ticker-item hot">⚡ SeatX — Real-time seat intelligence</div>
-    <div class="ticker-item alert">🔥 ${events.length} events tracked live</div>
+    <div class="ticker-item hot">⚡ السوق المباشر للمقاعد</div>
+    <div class="ticker-item">🇸🇦 السعودية أولًا</div>
+    <div class="ticker-item alert">🔥 ${events.length} فعالية يتابعها السوق</div>
+    <div class="ticker-item hot">⚡ تنبيهات لحظية للمقاعد</div>
+    <div class="ticker-item">🎟 موسم الرياض · UFC · الدوري السعودي</div>
+    <div class="ticker-item alert">🔥 ${events.length} فعالية مباشرة الآن</div>
   </div>
 </div>
 
@@ -735,7 +800,9 @@ function setLang(l) {
   const t = T[l];
   s('n-si', t.navMyAlerts); s('n-st', t.navStart);
   s('qhl', t.qhLabel); s('qh-btn', t.qhBtn); s('qh-or', t.qhOr); s('qh-demo', t.qhDemo);
-  sPh('qh-url', t.qhPlaceholder);
+  // Don't set qh-url placeholder here — startRotatingPlaceholder owns it so
+  // it rotates through Saudi-flavored prompts (الهلال × النصر / ويبوك / موسم الرياض / UFC).
+  if (typeof startRotatingPlaceholder === 'function') startRotatingPlaceholder();
   s('ep', t.ep); s('hm', t.hm); s('ha', t.ha); s('hs', t.hs);
   s('hb1', t.hb1); s('hb2', t.hb2);
   s('sl1', t.sl1); s('sl2', t.sl2); s('sl3', t.sl3);
@@ -1255,6 +1322,44 @@ async function initPush() {
   }
 }
 
+// =============================================================================
+// ROTATING PLACEHOLDER (Saudi market flavor)
+// =============================================================================
+var SAUDI_PLACEHOLDERS = {
+  ar: [
+    'ألصق رابط مباراة الهلال × النصر',
+    'ألصق رابط ويبوك',
+    'ألصق رابط موسم الرياض',
+    'ألصق رابط UFC Riyadh',
+    'ألصق رابط حفلة محمد عبده',
+    'ألصق رابط فعالية بوليفارد',
+  ],
+  en: [
+    'Paste Al Nassr vs Al Hilal link',
+    'Paste webook.com link',
+    'Paste Riyadh Season link',
+    'Paste UFC Riyadh link',
+    'Paste concert link',
+  ],
+};
+var _rotIdx = 0;
+var _rotTimer = null;
+function _rotatePlaceholder() {
+  var el = document.getElementById('qh-url');
+  if (!el) return;
+  if (el === document.activeElement) return; // don't change while user is typing
+  if (el.value) return;
+  var arr = SAUDI_PLACEHOLDERS[lang] || SAUDI_PLACEHOLDERS.en;
+  el.placeholder = arr[_rotIdx % arr.length];
+  _rotIdx++;
+}
+function startRotatingPlaceholder() {
+  if (_rotTimer) { clearInterval(_rotTimer); _rotTimer = null; }
+  _rotIdx = 0;
+  _rotatePlaceholder();
+  _rotTimer = setInterval(_rotatePlaceholder, 3500);
+}
+
 async function tryEnablePush(email) {
   if (!pushReady || !pushConfig || !pushConfig.vapidKey) return false;
   if (!('Notification' in window)) return false;
@@ -1284,10 +1389,11 @@ async function tryEnablePush(email) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  setLang('en');
+  // Arabic-first: load AR by default. User can toggle EN via the nav switch.
+  setLang('ar');
   initTimers();
   animateScoreBars();
-  document.getElementById('qh-url')?.focus();
+  startRotatingPlaceholder();
   initPush();
 });
 </script>
@@ -1469,7 +1575,7 @@ app.post('/api/subscribe', async (req: Request, res: Response) => {
       try {
         const ev = await pool.query('SELECT title FROM events WHERE id=$1', [idNum]);
         if (ev.rows[0]) {
-          await logActivity(idNum, 'watcher_added', `New watcher joined "${ev.rows[0].title}"`);
+          await logActivity(idNum, 'watcher_added', `👥 ${ev.rows[0].title} — متابع جديد انضم للسوق`);
         }
       } catch (_) { }
     }
