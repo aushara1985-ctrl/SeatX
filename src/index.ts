@@ -694,7 +694,7 @@ const T = {
     whyL1: 'Events in the market', whyL2: 'Active watchers', whyL3: 'Moves in the last 24h',
     // Pricing — sells priority/speed/access, not features or limits
     prcEye: '💎 Market access', prcH1: 'Speed decides who catches and who misses',
-    prcSub: "We don't sell features or limits. We sell <strong style=\"color:#fff\">priority</strong>, <strong style=\"color:#fff\">speed</strong>, and <strong style=\"color:#fff\">live market access</strong>.",
+    prcSub: "We don't sell features or limits. We sell <strong style='color:#fff'>priority</strong>, <strong style='color:#fff'>speed</strong>, and <strong style='color:#fff'>live market access</strong>.",
     pcProName: 'Priority', pcProPeriod: 'per month',
     pcProTag: 'Fastest alerts. Priority monitoring.',
     pcProF1: 'Live alerts the second seats return',
