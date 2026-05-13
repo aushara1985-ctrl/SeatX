@@ -157,7 +157,7 @@ function renderEventCard(e: any): string {
 // =============================================================================
 // HOME PAGE HTML
 // =============================================================================
-function getHTML(events: any[], feed: any[]): string {
+function getHTML(events: any[], feed: any[], alerts24h: number = 0): string {
   const ej = JSON.stringify(events).replace(/</g, '\\u003c');
   const fj = JSON.stringify(feed).replace(/</g, '\\u003c');
 
@@ -212,7 +212,7 @@ nav{position:sticky;top:0;z-index:100;border-bottom:1px solid var(--border);back
 .ticker-item.hot{color:var(--lime)}
 .ticker-item.alert{color:var(--orange)}
 @keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-.hero{max-width:1280px;margin:0 auto;padding:64px 32px 48px;display:grid;grid-template-columns:1fr 420px;gap:56px;align-items:start;position:relative;z-index:1}
+.hero{max-width:1280px;margin:0 auto;padding:40px 32px 32px;display:grid;grid-template-columns:1fr 420px;gap:48px;align-items:start;position:relative;z-index:1}
 .eyebrow-pill{display:inline-flex;align-items:center;gap:6px;background:rgba(163,230,53,.08);border:1px solid rgba(163,230,53,.18);border-radius:100px;padding:4px 12px 4px 8px;font-size:11px;font-weight:600;color:var(--lime);margin-bottom:20px;font-family:var(--mono)}
 .pulse-dot{width:6px;height:6px;border-radius:50%;background:var(--lime);animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(163,230,53,.5)}50%{box-shadow:0 0 0 5px rgba(163,230,53,0)}}
@@ -364,7 +364,15 @@ h1 em{color:var(--lime);font-style:normal;display:block}
 .ar .modal-alert-list{text-align:right}
 .modal-alert-item{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid var(--border);font-size:13px;color:#e4e4e7}
 .modal-alert-item a{color:var(--lime);text-decoration:none;font-size:11px;white-space:nowrap}
-.pricing-grid{display:grid;grid-template-columns:1fr 1fr 1.3fr;gap:16px;align-items:start}
+.pricing-grid{display:grid;grid-template-columns:1fr 1.3fr;gap:18px;align-items:start;max-width:880px;margin:0 auto}
+.why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:880px;margin:0 auto}
+.why-stat{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:22px 20px;text-align:center;position:relative;overflow:hidden}
+.why-stat::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--lime),transparent);opacity:.6}
+.why-stat-val{font-size:36px;font-weight:900;color:#fff;font-family:'DM Sans',sans-serif;line-height:1;margin-bottom:8px}
+.why-stat-val em{color:var(--lime);font-style:normal}
+.why-stat-label{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted2)}
+.why-pulse{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;color:var(--lime);background:rgba(163,230,53,.06);border:1px solid rgba(163,230,53,.18);border-radius:100px;padding:4px 11px;margin-bottom:14px}
+.why-pulse::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--lime);animation:pulse 1.8s infinite}
 .pricing-card{background:var(--bg2);border:1px solid var(--border);border-radius:18px;padding:24px;position:relative}
 .pricing-lifetime{border-color:rgba(163,230,53,.3);background:linear-gradient(135deg,rgba(163,230,53,.06),var(--bg2));padding:28px}
 .pc-badge{display:inline-block;background:var(--lime);color:#000;font-size:10px;font-weight:800;padding:3px 10px;border-radius:100px;margin-bottom:12px;font-family:var(--mono);text-transform:uppercase}
@@ -381,7 +389,7 @@ h1 em{color:var(--lime);font-style:normal;display:block}
 .pc-btn:hover{background:rgba(255,255,255,.1)}
 .pc-btn-lifetime{width:100%;background:var(--lime);border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:800;color:#000;cursor:pointer;margin-top:8px;transition:all .2s;font-family:inherit}
 .pc-btn-lifetime:hover{background:var(--lime2);transform:translateY(-1px)}
-@media(max-width:800px){.pricing-grid{grid-template-columns:1fr}}
+@media(max-width:800px){.pricing-grid{grid-template-columns:1fr}.why-grid{grid-template-columns:1fr}}
 footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.05em;position:relative;z-index:1}
 .ar footer{font-family:'IBM Plex Sans Arabic',sans-serif;letter-spacing:0}
 @media(max-width:960px){.hero{grid-template-columns:1fr;padding:40px 24px 32px;gap:32px}.market-panel{position:static}.steps-grid{grid-template-columns:repeat(2,1fr)}}
@@ -593,69 +601,60 @@ ${events.length > 0 ? `
   </div>
 </div>
 
-<div class="section">
-  <div class="section-eyebrow" id="hwe">How it works</div>
-  <div class="section-title" style="margin-bottom:24px" id="hwt">Three steps. That is it.</div>
-  <div class="steps-grid">
-    <div class="step-card" data-num="01">
-      <svg class="step-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <div class="step-title" id="st1">Pick an event</div>
-      <div class="step-desc" id="sd1">Browse tracked events or paste any ticket page URL to start monitoring.</div>
+<div class="section" id="why-now">
+  <div style="text-align:center;margin-bottom:26px">
+    <div class="why-pulse" id="why-pulse-label">السوق المباشر</div>
+    <div class="section-title" id="why-title">السوق يتحرك الآن</div>
+    <p style="font-size:14.5px;color:var(--muted2);max-width:520px;margin:12px auto 0;line-height:1.75" id="why-sub">كل ثانية، فعالية تتغيّر. الأسرع يمسك. المتأخر يفوّته.</p>
+  </div>
+  <div class="why-grid">
+    <div class="why-stat">
+      <div class="why-stat-val"><em>${events.length}</em></div>
+      <div class="why-stat-label" id="why-l1">فعالية في السوق</div>
     </div>
-    <div class="step-card" data-num="02">
-      <svg class="step-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-      <div class="step-title" id="st2">We watch the market</div>
-      <div class="step-desc" id="sd2">SeatX checks every 15 seconds — availability, demand shifts, page changes.</div>
+    <div class="why-stat">
+      <div class="why-stat-val">${events.reduce((a: number, e: any) => a + (e.watchers_count || 0), 0)}</div>
+      <div class="why-stat-label" id="why-l2">متابع نشط</div>
     </div>
-    <div class="step-card" data-num="03">
-      <svg class="step-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
-      <div class="step-title" id="st3">You get alerted first</div>
-      <div class="step-desc" id="sd3">Push or email the second seats move. Before the crowd even knows.</div>
+    <div class="why-stat">
+      <div class="why-stat-val"><em>${alerts24h}</em></div>
+      <div class="why-stat-label" id="why-l3">تحرّك في آخر ٢٤ ساعة</div>
     </div>
   </div>
 </div>
 
 <div class="section">
-  <div class="section-title" style="text-align:center;margin-bottom:8px" id="prc-h1">Be first. Or be late.</div>
-  <div class="section-title" style="text-align:center;margin-bottom:8px" id="prc-h2">Pick your speed</div>
-  <p style="text-align:center;font-size:13px;color:var(--muted2);margin-bottom:32px" id="prc-sub">Start free. Upgrade when you need more speed.</p>
-  <p style="text-align:center;font-size:13px;color:#fb923c;margin-bottom:24px;font-weight:600" id="prc-fomo">⚡ Tickets appear and disappear in seconds</p>
+  <div style="text-align:center;max-width:640px;margin:0 auto 28px">
+    <div class="section-eyebrow" id="prc-eye" style="margin-bottom:10px">💎 الوصول للسوق</div>
+    <div class="section-title" style="margin-bottom:10px" id="prc-h1">السرعة تحدّد من يمسك ومن يفوّته</div>
+    <p style="font-size:14px;color:var(--muted2);line-height:1.75" id="prc-sub">ما نبيع features أو حدود تقنية. نبيع <strong style="color:#fff">الأولوية</strong> و<strong style="color:#fff">السرعة</strong> و<strong style="color:#fff">الوصول للسوق المباشر</strong>.</p>
+  </div>
   <div class="pricing-grid">
     <div class="pricing-card">
-      <div class="pc-name" id="pc-entry-name">Start getting ahead</div>
-      <div class="pc-price">$9</div>
-      <div class="pc-period" id="pc-entry-period">per month</div>
-      <div class="pc-features">
-        <div class="pc-f" id="pc-entry-f1">Faster than free users</div>
-        <div class="pc-f" id="pc-entry-f2">Track multiple events at once</div>
-        <div class="pc-f" id="pc-entry-f3">Stop missing easy drops</div>
-      </div>
-      <button class="pc-btn" id="pc-entry-btn" onclick="openUpgradeModal('entry')">Get ahead — $9</button>
-    </div>
-    <div class="pricing-card">
-      <div class="pc-name" id="pc-pro-name">Be first every time</div>
+      <div class="pc-name" id="pc-pro-name">الأولوية</div>
       <div class="pc-price">$19</div>
-      <div class="pc-period" id="pc-pro-period">per month</div>
+      <div class="pc-period" id="pc-pro-period">شهرياً</div>
+      <div class="pc-sub" id="pc-pro-tag" style="color:#fb923c">أسرع تنبيهات. أولوية فحص.</div>
       <div class="pc-features">
-        <div class="pc-f" id="pc-pro-f1">Instant alerts</div>
-        <div class="pc-f" id="pc-pro-f2">Priority monitoring</div>
-        <div class="pc-f" id="pc-pro-f3">Designed for serious buyers</div>
+        <div class="pc-f" id="pc-pro-f1">تنبيهات لحظية لما المقاعد ترجع</div>
+        <div class="pc-f" id="pc-pro-f2">أولوية فحص أعلى من المجاني</div>
+        <div class="pc-f" id="pc-pro-f3">وصول كامل لذكاء السوق</div>
       </div>
-      <button class="pc-btn" id="pc-pro-btn" onclick="openUpgradeModal('pro')">Go Pro — $19</button>
+      <button class="pc-btn" id="pc-pro-btn" onclick="openUpgradeModal('pro')">احصل على الأولوية — $19</button>
     </div>
     <div class="pricing-card pricing-lifetime">
-      <div class="pc-badge" id="pc-life-badge">Best Value</div>
-      <div class="pc-name" id="pc-life-name">Never miss again</div>
+      <div class="pc-badge" id="pc-life-badge">💎 المؤسسون · للأوائل</div>
+      <div class="pc-name" id="pc-life-name">وصول مدى الحياة</div>
       <div class="pc-price">$199</div>
-      <div class="pc-period" id="pc-life-period">one-time</div>
-      <div class="pc-sub" id="pc-life-sub">You only need this once. Miss one important event… this pays for itself.</div>
+      <div class="pc-period" id="pc-life-period">دفعة واحدة</div>
+      <div class="pc-sub" id="pc-life-sub">سعر المؤسسين الأوائل. يرتفع بعد عدد محدود من المقاعد.</div>
       <div class="pc-features">
-        <div class="pc-f" id="pc-life-f1">Fastest alerts possible</div>
-        <div class="pc-f" id="pc-life-f2">Highest priority access</div>
-        <div class="pc-f" id="pc-life-f3">Track everything you care about</div>
-        <div class="pc-f" id="pc-life-f4">All future features included</div>
+        <div class="pc-f" id="pc-life-f1">كل مميزات الأولوية، للأبد</div>
+        <div class="pc-f" id="pc-life-f2">أعلى مستوى وصول للسوق</div>
+        <div class="pc-f" id="pc-life-f3">شارة المؤسس على ملفك</div>
+        <div class="pc-f" id="pc-life-f4">كل المزايا المستقبلية مشمولة</div>
       </div>
-      <button class="pc-btn-lifetime" id="pc-life-btn" onclick="openUpgradeModal('lifetime')">Never miss again — $199</button>
+      <button class="pc-btn-lifetime" id="pc-life-btn" onclick="openUpgradeModal('lifetime')">احجز كمؤسس — $199</button>
     </div>
   </div>
 </div>
@@ -689,23 +688,27 @@ const T = {
     see: 'Live events', set: 'What people are watching',
     srt1: 'Demand', srt2: 'Watchers', srt3: 'Recent',
     empt: 'No events yet', emps: 'Add the first event above to start tracking ↑',
-    hwe: 'How it works', hwt: 'Three steps. That is it.',
-    st1: 'Pick an event', sd1: 'Browse tracked events or paste any ticket page URL to start monitoring.',
-    st2: 'We watch the market', sd2: 'SeatX checks every 15 seconds — availability, demand shifts, page changes.',
-    st3: 'You get alerted first', sd3: 'Push or email the second seats move. Before the crowd even knows.',
-    prcH1: 'Be first. Or be late.', prcH2: 'Pick your speed',
-    prcSub: 'Start free. Upgrade when you need more speed.',
-    prcFomo: '⚡ Tickets appear and disappear in seconds',
-    pcEntryName: 'Start getting ahead', pcEntryPeriod: 'per month',
-    pcEntryF1: 'Faster than free users', pcEntryF2: 'Track multiple events at once', pcEntryF3: 'Stop missing easy drops',
-    pcEntryBtn: 'Get ahead — $9',
-    pcProName: 'Be first every time', pcProPeriod: 'per month',
-    pcProF1: 'Instant alerts', pcProF2: 'Priority monitoring', pcProF3: 'Designed for serious buyers',
-    pcProBtn: 'Go Pro — $19',
-    pcLifeBadge: 'Best Value', pcLifeName: 'Never miss again', pcLifePeriod: 'one-time',
-    pcLifeSub: 'You only need this once. Miss one important event… this pays for itself.',
-    pcLifeF1: 'Fastest alerts possible', pcLifeF2: 'Highest priority access', pcLifeF3: 'Track everything you care about', pcLifeF4: 'All future features included',
-    pcLifeBtn: 'Never miss again — $199',
+    // Why-now section (real DB stats below)
+    whyPulse: 'Live market', whyTitle: 'The market is moving now',
+    whySub: 'Every second, an event shifts. Faster catches. Slower misses.',
+    whyL1: 'Events in the market', whyL2: 'Active watchers', whyL3: 'Moves in the last 24h',
+    // Pricing — sells priority/speed/access, not features or limits
+    prcEye: '💎 Market access', prcH1: 'Speed decides who catches and who misses',
+    prcSub: "We don't sell features or limits. We sell <strong style=\"color:#fff\">priority</strong>, <strong style=\"color:#fff\">speed</strong>, and <strong style=\"color:#fff\">live market access</strong>.",
+    pcProName: 'Priority', pcProPeriod: 'per month',
+    pcProTag: 'Fastest alerts. Priority monitoring.',
+    pcProF1: 'Live alerts the second seats return',
+    pcProF2: 'Priority monitoring (faster than free)',
+    pcProF3: 'Full market intelligence access',
+    pcProBtn: 'Get priority — $19',
+    pcLifeBadge: '💎 Founding Users · Early only',
+    pcLifeName: 'Lifetime access', pcLifePeriod: 'one-time',
+    pcLifeSub: 'Founding-user price. Increases after a limited number of seats.',
+    pcLifeF1: 'All Priority features, forever',
+    pcLifeF2: 'Highest market access tier',
+    pcLifeF3: 'Founder badge on your profile',
+    pcLifeF4: 'All future features included',
+    pcLifeBtn: 'Claim founder access — $199',
     footer: '© 2026 SEATX · BUILT FOR FANS · 🇸🇦 SAUDI ARABIA',
     cdl: 'Next check', watching: 'watching', spiking: 'Spiking',
     alertBtn: 'Get Alert', emailPh: 'your@email.com',
@@ -746,23 +749,27 @@ const T = {
     see: 'الفعاليات المباشرة', set: 'ما يتابعه الناس الآن',
     srt1: 'الطلب', srt2: 'المتابعون', srt3: 'الأحدث',
     empt: 'لا فعاليات بعد', emps: 'أضف أول فعالية للمتابعة ↑',
-    hwe: 'كيف يعمل', hwt: 'ثلاث خطوات. بس.',
-    st1: 'اختر فعاليتك', sd1: 'تصفح الفعاليات أو أضف أي رابط تذاكر مباشرة.',
-    st2: 'نحن نراقب السوق', sd2: 'SeatX يفحص كل 15 ثانية — توفر وطلب وتغييرات.',
-    st3: 'تنبيهك يصلك أول', sd3: 'تنبيه فوري — push أو إيميل — لحظة تحرك المقاعد.',
-    prcH1: 'كن الأول. أو فاتك.', prcH2: 'اختر سرعتك',
-    prcSub: 'ابدأ مجاناً. ارقِ متى احتجت سرعة أعلى.',
-    prcFomo: '⚡ التذاكر تظهر وتختفي خلال ثوانٍ',
-    pcEntryName: 'ابدأ تتقدّم', pcEntryPeriod: 'شهرياً',
-    pcEntryF1: 'أسرع من المستخدم المجاني', pcEntryF2: 'تابع عدة فعاليات معاً', pcEntryF3: 'لا تضيع الإسقاطات السهلة',
-    pcEntryBtn: 'تقدّم — $9',
-    pcProName: 'كن الأول دائماً', pcProPeriod: 'شهرياً',
-    pcProF1: 'تنبيهات فورية', pcProF2: 'مراقبة بالأولوية', pcProF3: 'للمشترين الجادين',
-    pcProBtn: 'احترف — $19',
-    pcLifeBadge: 'أفضل قيمة', pcLifeName: 'لا تفوّت أبداً', pcLifePeriod: 'دفعة واحدة',
-    pcLifeSub: 'تحتاجه مرة واحدة فقط. فوّت فعالية واحدة مهمة… سيرد ثمنه.',
-    pcLifeF1: 'أسرع تنبيهات ممكنة', pcLifeF2: 'أعلى أولوية وصول', pcLifeF3: 'تابع كل ما يهمك', pcLifeF4: 'جميع المزايا المستقبلية مشمولة',
-    pcLifeBtn: 'لا تفوّت أبداً — $199',
+    // Why-now section
+    whyPulse: 'السوق المباشر', whyTitle: 'السوق يتحرك الآن',
+    whySub: 'كل ثانية، فعالية تتغيّر. الأسرع يمسك. المتأخر يفوّته.',
+    whyL1: 'فعالية في السوق', whyL2: 'متابع نشط', whyL3: 'تحرّك في آخر ٢٤ ساعة',
+    // Pricing — السرعة والأولوية، ليس features أو حدود
+    prcEye: '💎 الوصول للسوق', prcH1: 'السرعة تحدّد من يمسك ومن يفوّته',
+    prcSub: 'ما نبيع features أو حدود تقنية. نبيع <strong style="color:#fff">الأولوية</strong> و<strong style="color:#fff">السرعة</strong> و<strong style="color:#fff">الوصول للسوق المباشر</strong>.',
+    pcProName: 'الأولوية', pcProPeriod: 'شهرياً',
+    pcProTag: 'أسرع تنبيهات. أولوية فحص.',
+    pcProF1: 'تنبيهات لحظية لما المقاعد ترجع',
+    pcProF2: 'أولوية فحص أعلى من المجاني',
+    pcProF3: 'وصول كامل لذكاء السوق',
+    pcProBtn: 'احصل على الأولوية — $19',
+    pcLifeBadge: '💎 المؤسسون · للأوائل',
+    pcLifeName: 'وصول مدى الحياة', pcLifePeriod: 'دفعة واحدة',
+    pcLifeSub: 'سعر المؤسسين الأوائل. يرتفع بعد عدد محدود من المقاعد.',
+    pcLifeF1: 'كل مميزات الأولوية، للأبد',
+    pcLifeF2: 'أعلى مستوى وصول للسوق',
+    pcLifeF3: 'شارة المؤسس على ملفك',
+    pcLifeF4: 'كل المزايا المستقبلية مشمولة',
+    pcLifeBtn: 'احجز كمؤسس — $199',
     footer: '© 2026 SEATX · صُنع للمشجعين · 🇸🇦 المملكة العربية السعودية',
     cdl: 'الفحص القادم', watching: 'يتابعون', spiking: 'يرتفع',
     alertBtn: 'تنبّهني', emailPh: 'بريدك@مثال.com',
@@ -815,13 +822,16 @@ function setLang(l) {
   s('see', t.see); s('set', t.set);
   s('srt1', t.srt1); s('srt2', t.srt2); s('srt3', t.srt3);
   s('empt', t.empt); s('emps', t.emps);
-  s('hwe', t.hwe); s('hwt', t.hwt);
-  s('st1', t.st1); s('sd1', t.sd1); s('st2', t.st2); s('sd2', t.sd2); s('st3', t.st3); s('sd3', t.sd3);
-  s('prc-h1', t.prcH1); s('prc-h2', t.prcH2); s('prc-sub', t.prcSub); s('prc-fomo', t.prcFomo);
-  s('pc-entry-name', t.pcEntryName); s('pc-entry-period', t.pcEntryPeriod);
-  s('pc-entry-f1', t.pcEntryF1); s('pc-entry-f2', t.pcEntryF2); s('pc-entry-f3', t.pcEntryF3);
-  s('pc-entry-btn', t.pcEntryBtn);
-  s('pc-pro-name', t.pcProName); s('pc-pro-period', t.pcProPeriod);
+  // Why-now section (replaces How-it-works)
+  s('why-pulse-label', t.whyPulse); s('why-title', t.whyTitle); s('why-sub', t.whySub);
+  s('why-l1', t.whyL1); s('why-l2', t.whyL2); s('why-l3', t.whyL3);
+  // Pricing — 2 cards (Pro + Lifetime Founders). Entry card was removed in the
+  // landing pass; pcEntry* keys are intentionally gone.
+  s('prc-eye', t.prcEye); s('prc-h1', t.prcH1);
+  // prc-sub contains inline <strong> bold accents — use innerHTML, not textContent.
+  var prcSubEl = document.getElementById('prc-sub');
+  if (prcSubEl) prcSubEl.innerHTML = t.prcSub;
+  s('pc-pro-name', t.pcProName); s('pc-pro-period', t.pcProPeriod); s('pc-pro-tag', t.pcProTag);
   s('pc-pro-f1', t.pcProF1); s('pc-pro-f2', t.pcProF2); s('pc-pro-f3', t.pcProF3);
   s('pc-pro-btn', t.pcProBtn);
   s('pc-life-badge', t.pcLifeBadge); s('pc-life-name', t.pcLifeName); s('pc-life-period', t.pcLifePeriod);
@@ -1093,7 +1103,8 @@ async function subscribe(id, btnEl) {
     const r = await fetch('/api/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ eventId: id, email }) });
     const data = await r.json();
     if (r.status === 403 && data.upgrade) {
-      openUpgradeModal('entry');
+      // Entry tier was retired in the landing pass. Limit hit -> Pro upgrade.
+      openUpgradeModal('pro');
       return;
     }
     if (!r.ok) throw new Error(data.message || 'failed');
@@ -1497,6 +1508,7 @@ body{background:#080a0e;color:#f4f4f5;font-family:${isAr ? "'IBM Plex Sans Arabi
 app.get('/', async (_req: Request, res: Response) => {
   let events: any[] = [];
   let feed: any[] = [];
+  let alerts24h = 0;
   try {
     const r = await pool.query('SELECT * FROM events ORDER BY demand_score DESC, created_at DESC');
     events = r.rows;
@@ -1504,8 +1516,17 @@ app.get('/', async (_req: Request, res: Response) => {
   try {
     feed = await getActivityFeed(20);
   } catch (_) { }
+  try {
+    // Real DB stat for the "why now" section. No fake numbers.
+    const a = await pool.query(
+      `SELECT COUNT(*) AS c FROM activity_logs
+       WHERE type IN ('alert_sent','status_change')
+         AND created_at > NOW() - INTERVAL '24 hours'`
+    );
+    alerts24h = parseInt(a.rows[0]?.c || '0', 10) || 0;
+  } catch (_) { }
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.end(getHTML(events, feed));
+  res.end(getHTML(events, feed, alerts24h));
 });
 
 app.post('/api/events', async (req: Request, res: Response) => {
