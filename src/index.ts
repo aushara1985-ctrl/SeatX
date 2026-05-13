@@ -155,6 +155,42 @@ function renderEventCard(e: any): string {
 }
 
 // =============================================================================
+// TRENDING CARD (compact, app-like — for the Trending tab)
+// =============================================================================
+function renderTrendingCard(e: any): string {
+  const band: string = e.demand_band || 'low';
+  const cardClass = (band === 'very_high' || band === 'high')
+    ? 'tcard tcard-hot'
+    : band === 'medium' ? 'tcard tcard-warm' : 'tcard';
+  const heatLabel = band === 'very_high' ? '🔥 طلب مرتفع جداً'
+    : band === 'high'   ? '⚡ طلب مرتفع'
+    : band === 'medium' ? '👀 يرتفع الطلب'
+    : '○ قيد المراقبة';
+  const watchers = e.watchers_count || 0;
+  const watchersStr = watchers >= 1000
+    ? (Math.round(watchers / 100) / 10).toFixed(1).replace(/\.0$/, '') + 'K'
+    : String(watchers);
+  const safeTitle = escapeHtml(e.title || '');
+  const cat = e.source_name ? escapeHtml(e.source_name) : 'فعالية مباشرة';
+  const url = escapeHtml(e.event_url || '#');
+  const thumb = e.hero_image
+    ? `<img src="${escapeHtml(e.hero_image)}" alt="${safeTitle}" loading="lazy" onerror="this.parentNode.innerHTML='<div class=tcard-thumb-fallback>🎫</div>'"/>`
+    : `<div class="tcard-thumb-fallback">🎫</div>`;
+  return `
+  <a class="${cardClass}" href="${url}" target="_blank" rel="noopener">
+    <div class="tcard-thumb">${thumb}</div>
+    <div class="tcard-body">
+      <div class="tcard-title">${safeTitle}</div>
+      <div class="tcard-cat">${cat}</div>
+      <div class="tcard-heat heat-${band}">${heatLabel}</div>
+    </div>
+    <div class="tcard-meta">
+      <div class="tcard-watchers"><em>${watchersStr}</em> يراقبون</div>
+    </div>
+  </a>`;
+}
+
+// =============================================================================
 // HOME PAGE HTML
 // =============================================================================
 function getHTML(events: any[], feed: any[], alerts24h: number = 0): string {
@@ -457,6 +493,83 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
   .modal-sub{font-size:14px;line-height:1.65}
   .modal-input{padding:13px 16px;font-size:16px}
 }
+
+/* ─── TAB SYSTEM (uniform — same on mobile + desktop) ─────────────── */
+[data-tab]:not(.active-tab){display:none !important}
+@media(max-width:960px){
+  /* Top nav owns only branding + lang on mobile — bnav owns navigation */
+  .nav-r .gbtn,.nav-r .obtn{display:none}
+}
+
+/* ─── BOTTOM NAV (always visible — app-like primary navigation) ───── */
+.bnav{position:fixed;bottom:0;left:0;right:0;height:62px;background:rgba(8,10,14,.97);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-top:1px solid var(--border);display:flex;align-items:stretch;justify-content:space-around;z-index:200;padding:0 6px;font-family:'IBM Plex Sans Arabic',sans-serif;padding-bottom:env(safe-area-inset-bottom,0)}
+.bnav-item{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--muted2);cursor:pointer;font-family:inherit;font-size:10.5px;font-weight:700;background:none;border:none;padding:8px 4px 6px;transition:color .15s;line-height:1}
+.bnav-item.active{color:var(--lime)}
+.bnav-icon{font-size:19px;line-height:1}
+.bnav-label{font-size:10.5px;line-height:1;white-space:nowrap}
+.bnav-fab-wrap{flex:1.15;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;cursor:pointer;border:none;background:none;font-family:inherit;padding:0}
+.bnav-fab{width:52px;height:52px;border-radius:50%;background:var(--lime);color:#000;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:300;margin:-18px 0 4px;box-shadow:0 8px 22px rgba(163,230,53,.42);border:3px solid var(--bg);line-height:1}
+.bnav-fab-label{font-size:10.5px;font-weight:700;color:var(--lime);line-height:1}
+body{padding-bottom:84px}
+@media(min-width:961px){.bnav{max-width:520px;left:50%;transform:translateX(-50%);margin-bottom:12px;border-radius:18px;height:58px;border:1px solid var(--border);box-shadow:0 8px 32px rgba(0,0,0,.4)}body{padding-bottom:92px}}
+
+/* ─── TCARD (compact trending card, Bloomberg-style) ─────────────── */
+.tcards-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;max-width:880px;margin-left:auto;margin-right:auto;padding:0 4px}
+.tcards-h-title{display:flex;align-items:center;gap:8px;font-size:18px;font-weight:800;color:#fff}
+.tcards-h-title::before{content:'🔥';font-size:18px}
+.tcards-h-sub{font-size:11px;color:var(--lime);font-family:var(--mono);text-decoration:none;border:1px solid rgba(163,230,53,.2);border-radius:100px;padding:4px 11px;background:rgba(163,230,53,.06)}
+.tcards-list{display:flex;flex-direction:column;gap:12px;max-width:880px;margin:0 auto}
+.tcard{display:flex;align-items:stretch;gap:14px;background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:14px;transition:all .2s;cursor:pointer;position:relative;overflow:hidden}
+.tcard:hover,.tcard:active{border-color:rgba(163,230,53,.25);transform:translateY(-1px)}
+.tcard.tcard-hot{border-color:rgba(239,68,68,.22)}
+.tcard.tcard-warm{border-color:rgba(249,115,22,.18)}
+.tcard-thumb{flex-shrink:0;width:62px;height:62px;border-radius:12px;background:linear-gradient(135deg,#1a1f2e,#0d1117);display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid var(--border)}
+.tcard-thumb img{width:100%;height:100%;object-fit:cover}
+.tcard-thumb-fallback{font-size:26px;opacity:.4}
+.tcard-body{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:5px}
+.tcard-title{font-size:15.5px;font-weight:800;color:#fff;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tcard-cat{font-size:11.5px;color:var(--muted2);font-weight:500}
+.tcard-heat{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:100px;width:fit-content;margin-top:2px;white-space:nowrap}
+.tcard-heat.heat-very_high{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+.tcard-heat.heat-high{background:rgba(249,115,22,.12);color:#fb923c;border:1px solid rgba(249,115,22,.25)}
+.tcard-heat.heat-medium{background:rgba(234,179,8,.1);color:#fbbf24;border:1px solid rgba(234,179,8,.2)}
+.tcard-heat.heat-low{background:rgba(255,255,255,.04);color:var(--muted2);border:1px solid var(--border)}
+.tcard-meta{flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;gap:6px;min-width:64px}
+.tcard-spark{width:60px;height:24px;display:block;overflow:visible}
+.tcard-watchers{font-family:var(--mono);font-size:10.5px;color:var(--muted2);font-weight:600;white-space:nowrap;direction:ltr;text-align:left}
+.tcard-watchers em{color:#fff;font-style:normal;font-weight:800;font-size:13px}
+@media(max-width:600px){
+  .tcard{padding:12px;gap:12px}
+  .tcard-thumb{width:56px;height:56px;border-radius:10px}
+  .tcard-title{font-size:15.5px}
+  .tcard-heat{font-size:11px}
+  .tcard-spark{width:54px;height:22px}
+}
+
+/* ─── ACCOUNT TAB ─────────────────────────────────────────────────── */
+.acc-block{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:22px;margin:0 auto 14px;max-width:520px}
+.acc-h{font-size:14px;font-weight:700;color:#fff;margin-bottom:6px}
+.acc-sub{font-size:12.5px;color:var(--muted2);line-height:1.65;margin-bottom:14px}
+.acc-btn{width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border2);border-radius:11px;padding:13px;font-size:14px;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s}
+.acc-btn:hover{background:rgba(255,255,255,.1)}
+.acc-row{display:flex;gap:10px;align-items:stretch}
+.acc-row .modal-input{margin-bottom:0;flex:1}
+.acc-ltog{display:flex;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:3px;gap:3px;width:fit-content;margin:0 auto}
+.acc-ltog button{background:none;border:none;border-radius:7px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;color:var(--muted2);font-family:inherit;transition:all .15s}
+.acc-ltog button.on{background:var(--lime);color:#000}
+
+/* ─── ALERTS FEED ─────────────────────────────────────────────────── */
+.afeed-list{display:flex;flex-direction:column;gap:8px;max-width:640px;margin:0 auto}
+.afeed-item{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;gap:11px;align-items:flex-start;font-size:13.5px;line-height:1.55;color:#e4e4e7}
+.afeed-item.afeed-hot{border-color:rgba(163,230,53,.2);background:rgba(163,230,53,.03)}
+.afeed-item.afeed-alert{border-color:rgba(249,115,22,.2);background:rgba(249,115,22,.03)}
+.afeed-time{font-family:var(--mono);font-size:10px;color:var(--muted);flex-shrink:0;direction:ltr;margin-top:2px;white-space:nowrap}
+.afeed-msg{flex:1;min-width:0}
+.afeed-empty{text-align:center;padding:48px 24px;color:var(--muted2);font-size:14px;line-height:1.7;max-width:420px;margin:0 auto}
+
+/* ─── MARKET PULSE (Why-now upgrade — "monitoring" copy when 0) ──── */
+.market-monitor{display:inline-flex;align-items:center;gap:7px;color:var(--lime);font-size:13px;font-weight:700;font-family:'IBM Plex Sans Arabic',sans-serif}
+.market-monitor::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--lime);animation:pulse 1.6s infinite;flex-shrink:0}
 </style>
 </head>
 <body class="ar">
@@ -472,12 +585,12 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
       <button class="lb" onclick="setLang('en')">EN</button>
       <button class="lb on" onclick="setLang('ar')">AR</button>
     </div>
-    <button class="obtn" id="n-si" onclick="openMyAlerts()">تنبيهاتي</button>
-    <button class="gbtn" id="n-st" onclick="scrollTo('add')">ابدأ المتابعة</button>
+    <button class="obtn" id="n-si" onclick="switchTab('account')">تنبيهاتي</button>
+    <button class="gbtn" id="n-st" onclick="switchTab('home');setTimeout(function(){scrollTo('add')},80)">ابدأ المتابعة</button>
   </div>
 </nav>
 
-<div class="quick-hero">
+<div class="quick-hero active-tab" data-tab="home">
   <div class="qh-inner">
     <div class="qh-label" id="qhl">🎫 Track any event — free</div>
     <div class="qh-row">
@@ -488,7 +601,7 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
   </div>
 </div>
 
-<div class="ticker-wrap">
+<div class="ticker-wrap active-tab" data-tab="home">
   <div class="ticker" id="ticker">
     ${[...Array(2)].map(() => (feed.slice(0, 8).map((f: any) =>
       `<div class="ticker-item ${f.type === 'alert_sent' ? 'alert' : f.type === 'status_change' ? 'hot' : ''}">${escapeHtml(f.message || '')}</div>`
@@ -502,7 +615,7 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
   </div>
 </div>
 
-<section class="hero">
+<section class="hero active-tab" data-tab="home">
   <div class="hero-left">
     <div class="eyebrow-pill"><div class="pulse-dot"></div><span id="ep">Saudi seat market · Live</span></div>
     <h1><span id="hm">اعرف قبل</span><em id="ha">ما تطير المقاعد.</em></h1>
@@ -553,7 +666,7 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
   </div>
 </section>
 
-<div class="section" id="add">
+<div class="section active-tab" id="add" data-tab="home">
   <div class="add-form">
     <div class="form-title" id="ft1">Track any event</div>
     <div class="form-sub" id="ft2">We alert you the moment seats become available.</div>
@@ -566,42 +679,23 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
   </div>
 </div>
 
-${events.length > 0 ? `
-<div class="section">
-  <div class="section-head">
-    <div>
-      <div class="section-eyebrow" id="trnd-e">🔥 Trending</div>
-      <div class="section-title" id="trnd-t">Hottest right now</div>
-    </div>
+<!-- ════ TRENDING TAB — Bloomberg-style compact cards ═══════════════ -->
+<div class="section" id="trending" data-tab="trending">
+  <div class="tcards-head">
+    <div class="tcards-h-title" id="trnd-t">الأكثر تداولًا الآن</div>
+    <a class="tcards-h-sub" href="#" onclick="event.preventDefault();switchTab('watching')" id="trnd-link">عرض الكل</a>
   </div>
-  <div class="events-grid">
-    ${events.filter((e: any) => (e.demand_score || 0) > 20).slice(0, 3).map((e: any) => renderEventCard(e)).join('') || '<p style="color:var(--muted2)" id="trnd-empty">No trending events yet</p>'}
-  </div>
-</div>` : ''}
-
-<div class="section" id="evs">
-  <div class="section-head">
-    <div>
-      <div class="section-eyebrow" id="see">Live events</div>
-      <div class="section-title" id="set">What people are watching</div>
-    </div>
-    <div class="sort-tabs">
-      <button class="sort-tab on" onclick="sortEvents('demand',this)" id="srt1">Demand</button>
-      <button class="sort-tab" onclick="sortEvents('watchers',this)" id="srt2">Watchers</button>
-      <button class="sort-tab" onclick="sortEvents('recent',this)" id="srt3">Recent</button>
-    </div>
-  </div>
-  <div class="events-grid" id="egrid">
+  <div class="tcards-list" id="tcards-list">
     ${events.length === 0 ? `
-    <div class="empty-state" style="grid-column:1/-1">
-      <div class="empty-icon">🎫</div>
-      <div class="empty-title" id="empt">No events yet</div>
-      <div class="empty-sub" id="emps">Add the first event above to start tracking ↑</div>
-    </div>` : events.map((e: any) => renderEventCard(e)).join('')}
+    <div class="afeed-empty" id="trnd-empty">
+      <div style="font-size:38px;opacity:.35;margin-bottom:12px">📊</div>
+      <div style="color:#fff;font-weight:700;font-size:15px;margin-bottom:6px">السوق هادي حالياً</div>
+      <div style="font-size:13px">أضف أول فعالية من الـ + في الأسفل، ونبدأ نراقبها لحظياً.</div>
+    </div>` : events.map((e: any) => renderTrendingCard(e)).join('')}
   </div>
 </div>
 
-<div class="section" id="why-now">
+<div class="section active-tab" id="why-now" data-tab="home">
   <div style="text-align:center;margin-bottom:26px">
     <div class="why-pulse" id="why-pulse-label">السوق المباشر</div>
     <div class="section-title" id="why-title">السوق يتحرك الآن</div>
@@ -617,17 +711,48 @@ ${events.length > 0 ? `
       <div class="why-stat-label" id="why-l2">متابع نشط</div>
     </div>
     <div class="why-stat">
-      <div class="why-stat-val"><em>${alerts24h}</em></div>
-      <div class="why-stat-label" id="why-l3">تحرّك في آخر ٢٤ ساعة</div>
+      ${alerts24h > 0
+        ? `<div class="why-stat-val"><em>${alerts24h}</em></div>
+           <div class="why-stat-label" id="why-l3">تحرّك في آخر ٢٤ ساعة</div>`
+        : `<div class="why-stat-val" style="font-size:16px;line-height:1.4"><span class="market-monitor" id="why-monitor">السوق قيد المراقبة</span></div>
+           <div class="why-stat-label" id="why-l3">نراقب لحظياً — أي تحرّك يصلك</div>`
+      }
     </div>
   </div>
 </div>
 
-<div class="section">
-  <div style="text-align:center;max-width:640px;margin:0 auto 28px">
+<!-- ════ ACCOUNT TAB — login lookup + lang + pricing + about ═══════ -->
+<div class="section" data-tab="account">
+  <div style="text-align:center;margin-bottom:22px">
+    <div class="section-title" id="acc-title">حسابي</div>
+    <p style="font-size:13px;color:var(--muted2);margin-top:6px" id="acc-subtitle">إعداداتك ووصولك للسوق المباشر</p>
+  </div>
+
+  <!-- Email lookup → user's tracked events -->
+  <div class="acc-block">
+    <div class="acc-h" id="acc-alerts-h">تنبيهاتي</div>
+    <div class="acc-sub" id="acc-alerts-sub">اكتب بريدك لرؤية الفعاليات اللي تتابعها.</div>
+    <div class="acc-row">
+      <input type="email" class="modal-input" id="acc-email" placeholder="your@email.com" autocomplete="email" style="margin-bottom:0"/>
+      <button class="gbtn" style="padding:13px 24px;font-size:14px;border-radius:11px;white-space:nowrap" onclick="accLookup()" id="acc-lookup-btn">عرض</button>
+    </div>
+    <div id="acc-alerts-result" style="margin-top:14px"></div>
+  </div>
+
+  <!-- Language toggle -->
+  <div class="acc-block" style="text-align:center">
+    <div class="acc-h" id="acc-lang-h" style="margin-bottom:14px">اللغة</div>
+    <div class="acc-ltog">
+      <button onclick="setLang('en')" id="acc-ltog-en">EN</button>
+      <button onclick="setLang('ar')" id="acc-ltog-ar" class="on">العربية</button>
+    </div>
+  </div>
+
+  <!-- Pricing -->
+  <div style="margin:30px 0 24px;text-align:center">
     <div class="section-eyebrow" id="prc-eye" style="margin-bottom:10px">💎 الوصول للسوق</div>
     <div class="section-title" style="margin-bottom:10px" id="prc-h1">السرعة تحدّد من يمسك ومن يفوّته</div>
-    <p style="font-size:14px;color:var(--muted2);line-height:1.75" id="prc-sub">ما نبيع features أو حدود تقنية. نبيع <strong style="color:#fff">الأولوية</strong> و<strong style="color:#fff">السرعة</strong> و<strong style="color:#fff">الوصول للسوق المباشر</strong>.</p>
+    <p style="font-size:14px;color:var(--muted2);line-height:1.75;max-width:520px;margin:0 auto" id="prc-sub">ما نبيع features أو حدود تقنية. نبيع <strong style='color:#fff'>الأولوية</strong> و<strong style='color:#fff'>السرعة</strong> و<strong style='color:#fff'>الوصول للسوق المباشر</strong>.</p>
   </div>
   <div class="pricing-grid">
     <div class="pricing-card">
@@ -659,7 +784,72 @@ ${events.length > 0 ? `
   </div>
 </div>
 
+<!-- ════ WATCHING TAB — user's tracked events ══════════════════════ -->
+<div class="section" data-tab="watching">
+  <div class="tcards-head">
+    <div class="tcards-h-title" style="gap:8px" id="watch-title">مراقباتي</div>
+  </div>
+  <div id="watch-content">
+    <div class="acc-block">
+      <div class="acc-h" id="watch-h">شوف فعالياتك</div>
+      <div class="acc-sub" id="watch-sub">اكتب بريدك لعرض الفعاليات اللي تتابعها — نبهنك لحظة رجوع المقاعد.</div>
+      <div class="acc-row">
+        <input type="email" class="modal-input" id="watch-email" placeholder="your@email.com" autocomplete="email" style="margin-bottom:0"/>
+        <button class="gbtn" style="padding:13px 24px;font-size:14px;border-radius:11px;white-space:nowrap" onclick="watchLookup()" id="watch-btn">عرض</button>
+      </div>
+    </div>
+    <div id="watch-list" style="margin-top:18px"></div>
+  </div>
+</div>
+
+<!-- ════ ALERTS TAB — real DB activity feed ════════════════════════ -->
+<div class="section" data-tab="alerts">
+  <div class="tcards-head">
+    <div class="tcards-h-title" style="gap:8px" id="alerts-title">التنبيهات</div>
+    <button class="tcards-h-sub" onclick="loadAlertsFeed()" style="cursor:pointer;font-family:inherit" id="alerts-refresh">تحديث</button>
+  </div>
+  <div class="afeed-list" id="alerts-list">
+    ${feed.length === 0 ? `
+    <div class="afeed-empty">
+      <div style="font-size:36px;opacity:.35;margin-bottom:10px">🔔</div>
+      <div style="color:#fff;font-weight:700;font-size:15px;margin-bottom:6px">السوق هادي حالياً</div>
+      <div>لما تصير حركة، تظهر هنا فورًا.</div>
+    </div>` : feed.slice(0, 30).map((f: any) => {
+      const cls = f.type === 'alert_sent' ? 'afeed-item afeed-alert'
+                : f.type === 'status_change' ? 'afeed-item afeed-hot'
+                : 'afeed-item';
+      const t = new Date(f.createdAt);
+      const time = `${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`;
+      return `<div class="${cls}"><div class="afeed-msg">${escapeHtml(f.message || '')}</div><div class="afeed-time">${time}</div></div>`;
+    }).join('')}
+  </div>
+</div>
+
 <footer id="ftr">© 2026 SEATX · BUILT FOR FANS · 🇸🇦 SAUDI ARABIA</footer>
+
+<!-- ════ BOTTOM NAV — mobile primary navigation (5 tabs) ═══════════ -->
+<nav class="bnav" id="bnav" role="navigation">
+  <button class="bnav-item active" data-target="home" onclick="switchTab('home')">
+    <div class="bnav-icon">🏠</div>
+    <div class="bnav-label" id="bnav-home">الرئيسية</div>
+  </button>
+  <button class="bnav-item" data-target="trending" onclick="switchTab('trending')">
+    <div class="bnav-icon">📈</div>
+    <div class="bnav-label" id="bnav-trending">الأكثر تداولًا</div>
+  </button>
+  <button class="bnav-item" data-target="watching" onclick="switchTab('watching')">
+    <div class="bnav-icon">👁</div>
+    <div class="bnav-label" id="bnav-watching">مراقباتي</div>
+  </button>
+  <button class="bnav-item" data-target="alerts" onclick="switchTab('alerts')">
+    <div class="bnav-icon">🔔</div>
+    <div class="bnav-label" id="bnav-alerts">التنبيهات</div>
+  </button>
+  <button class="bnav-item" data-target="account" onclick="switchTab('account')">
+    <div class="bnav-icon">👤</div>
+    <div class="bnav-label" id="bnav-account">حسابي</div>
+  </button>
+</nav>
 
 <script>
 const EVENTS = ${ej};
@@ -727,6 +917,24 @@ const T = {
     closeBtn: 'Close',
     invalidEmail: 'Enter valid email', invalidUrl: 'Paste a valid link', fillAll: 'Fill all fields',
     adding: 'Adding...', sending: 'Sending...', error: 'Something went wrong', limitMsg: 'Free plan: 1 active event. Upgrade for more.',
+    // Tab labels (bottom nav)
+    tabHome: 'Home', tabTrending: 'Trending', tabWatching: 'Watching', tabAlerts: 'Alerts', tabAccount: 'Account',
+    // Trending tab
+    trendTitle: 'Hottest right now', trendLink: 'See all',
+    trendEmptyTitle: 'Quiet market right now', trendEmptyBody: 'Add the first event from the + on the home tab — we start tracking instantly.',
+    // Watching tab
+    watchTitle: 'My watching', watchH: 'See your events', watchSub: 'Enter your email to see the events you are tracking — we alert you the second seats return.',
+    watchBtn: 'Show', watchEmptyTitle: 'No events yet', watchEmptyBody: 'Go to Home and paste your first event link.',
+    // Alerts tab
+    alertsTitle: 'Alerts', alertsRefresh: 'Refresh',
+    alertsEmptyTitle: 'Quiet market right now', alertsEmptyBody: 'Any move and it shows up here instantly.',
+    // Account tab
+    accTitle: 'My account', accSubtitle: 'Your settings and market access',
+    accAlertsH: 'My alerts', accAlertsSub: 'Enter your email to see events you are tracking.', accLookupBtn: 'Show',
+    accLangH: 'Language',
+    // Why-now zero-state
+    whyMonitor: 'Market under monitoring',
+    whyL3Zero: 'Watching live — every move reaches you',
   },
   ar: {
     navMyAlerts: 'تنبيهاتي', navStart: 'ابدأ المتابعة',
@@ -788,6 +996,24 @@ const T = {
     closeBtn: 'إغلاق',
     invalidEmail: 'أدخل بريدًا صحيحًا', invalidUrl: 'الصق رابطاً صحيحاً', fillAll: 'أكمل جميع الحقول',
     adding: 'جاري الإضافة...', sending: 'جاري الإرسال...', error: 'حصل خطأ', limitMsg: 'الخطة المجانية: فعالية واحدة نشطة. ارقِ لمزيد.',
+    // Tab labels (bottom nav)
+    tabHome: 'الرئيسية', tabTrending: 'الأكثر تداولًا', tabWatching: 'مراقباتي', tabAlerts: 'التنبيهات', tabAccount: 'حسابي',
+    // Trending tab
+    trendTitle: 'الأكثر تداولًا الآن', trendLink: 'عرض الكل',
+    trendEmptyTitle: 'السوق هادي حالياً', trendEmptyBody: 'أضف أول فعالية من الرئيسية، ونبدأ نراقبها لحظياً.',
+    // Watching tab
+    watchTitle: 'مراقباتي', watchH: 'شوف فعالياتك', watchSub: 'اكتب بريدك لعرض الفعاليات اللي تتابعها — نبّهك لحظة رجوع المقاعد.',
+    watchBtn: 'عرض', watchEmptyTitle: 'لسه ما تتابع أي فعالية', watchEmptyBody: 'روح للرئيسية وألصق رابط أول فعالية.',
+    // Alerts tab
+    alertsTitle: 'التنبيهات', alertsRefresh: 'تحديث',
+    alertsEmptyTitle: 'السوق هادي حالياً', alertsEmptyBody: 'لما تصير حركة، تظهر هنا فورًا.',
+    // Account tab
+    accTitle: 'حسابي', accSubtitle: 'إعداداتك ووصولك للسوق المباشر',
+    accAlertsH: 'تنبيهاتي', accAlertsSub: 'اكتب بريدك لرؤية الفعاليات اللي تتابعها.', accLookupBtn: 'عرض',
+    accLangH: 'اللغة',
+    // Why-now zero-state
+    whyMonitor: 'السوق قيد المراقبة',
+    whyL3Zero: 'نراقب لحظياً — أي تحرّك يصلك',
   }
 };
 
@@ -838,6 +1064,25 @@ function setLang(l) {
   s('pc-life-sub', t.pcLifeSub);
   s('pc-life-f1', t.pcLifeF1); s('pc-life-f2', t.pcLifeF2); s('pc-life-f3', t.pcLifeF3); s('pc-life-f4', t.pcLifeF4);
   s('pc-life-btn', t.pcLifeBtn);
+  // Tab labels (bottom nav)
+  s('bnav-home', t.tabHome); s('bnav-trending', t.tabTrending);
+  s('bnav-watching', t.tabWatching); s('bnav-alerts', t.tabAlerts);
+  s('bnav-account', t.tabAccount);
+  // Trending tab
+  s('trnd-t', t.trendTitle); s('trnd-link', t.trendLink);
+  // Watching tab
+  s('watch-title', t.watchTitle); s('watch-h', t.watchH);
+  s('watch-sub', t.watchSub); s('watch-btn', t.watchBtn);
+  // Alerts tab
+  s('alerts-title', t.alertsTitle); s('alerts-refresh', t.alertsRefresh);
+  // Account tab
+  s('acc-title', t.accTitle); s('acc-subtitle', t.accSubtitle);
+  s('acc-alerts-h', t.accAlertsH); s('acc-alerts-sub', t.accAlertsSub);
+  s('acc-lookup-btn', t.accLookupBtn); s('acc-lang-h', t.accLangH);
+  // Account language toggle reflects current lang
+  document.querySelectorAll('.acc-ltog button').forEach((b, i) => b.classList.toggle('on', i === (isAr ? 1 : 0)));
+  // Why-now zero-state copy (only present when alerts_24h was 0 at SSR)
+  s('why-monitor', t.whyMonitor);
   s('ftr', t.footer);
   renderCards();
 }
@@ -1400,12 +1645,125 @@ async function tryEnablePush(email) {
   }
 }
 
+// =============================================================================
+// TAB SYSTEM (mobile-first app-like navigation)
+// =============================================================================
+let activeTab = 'home';
+
+function switchTab(name) {
+  if (!name) return;
+  activeTab = name;
+  // Show/hide sections by data-tab
+  document.querySelectorAll('[data-tab]').forEach(el => {
+    if (el.dataset.tab === name) el.classList.add('active-tab');
+    else el.classList.remove('active-tab');
+  });
+  // Highlight active bnav item
+  document.querySelectorAll('.bnav-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.target === name);
+  });
+  // Scroll to top on tab switch (app-like)
+  window.scrollTo({ top: 0, behavior: 'instant' });
+  // Lazy-load tab data on demand
+  if (name === 'alerts') loadAlertsFeed();
+  if (name === 'home') {
+    // Re-focus the quick-hero input so users can paste immediately
+    setTimeout(() => document.getElementById('qh-url')?.focus(), 80);
+  }
+}
+
+// Render a list of subscribed events into a target container. Reuses
+// /api/my-alerts which was added in Phase 1.
+async function renderUserAlertsList(email, targetId, lang) {
+  const target = document.getElementById(targetId);
+  if (!target) return;
+  target.innerHTML = '<div style="color:var(--muted2);font-size:13px;text-align:center;padding:14px">جاري التحميل...</div>';
+  try {
+    const r = await fetch('/api/my-alerts?email=' + encodeURIComponent(email));
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.message || 'failed');
+    const items = data.alerts || [];
+    if (items.length === 0) {
+      target.innerHTML = '<div class="afeed-empty"><div style="font-size:32px;opacity:.35;margin-bottom:10px">👁</div><div style="color:#fff;font-weight:700;font-size:14px;margin-bottom:6px">لسه ما تتابع أي فعالية</div><div style="font-size:13px">روح للرئيسية وألصق رابط أول فعالية.</div></div>';
+      return;
+    }
+    target.innerHTML = '<div class="afeed-list">' + items.map(a => {
+      const band = a.demand_band || 'low';
+      const heat = band === 'very_high' ? '🔥 ملتهب'
+                  : band === 'high'     ? '⚡ طلب عالي'
+                  : band === 'medium'   ? '👀 يرتفع'
+                  : '○ هادي';
+      const status = a.status === 'available' ? '⚡ متاح'
+                   : a.status === 'maybe_available' ? '👀 ربما' : '○ قيد المراقبة';
+      return '<div class="afeed-item"><div class="afeed-msg"><div style="font-weight:800;color:#fff;font-size:14px;margin-bottom:3px">' + escapeHtmlClient(a.title) + '</div><div style="font-size:11.5px;color:var(--muted2)">' + status + ' · ' + heat + '</div></div><a class="tcards-h-sub" href="/event/' + a.event_id + (lang === 'ar' ? '?lang=ar' : '') + '" target="_blank" rel="noopener" style="text-decoration:none">→</a></div>';
+    }).join('') + '</div>';
+  } catch (e) {
+    target.innerHTML = '<div style="color:#f87171;font-size:13px;text-align:center;padding:14px">تعذّر التحميل — جرّب مرة ثانية</div>';
+  }
+}
+
+async function watchLookup() {
+  const t = T[lang];
+  const email = document.getElementById('watch-email')?.value?.trim();
+  if (!email || !email.includes('@')) { alert(t.invalidEmail); return; }
+  try { localStorage.setItem('seatx_last_email', email); } catch (_) { }
+  await renderUserAlertsList(email, 'watch-list', lang);
+}
+
+async function accLookup() {
+  const t = T[lang];
+  const email = document.getElementById('acc-email')?.value?.trim();
+  if (!email || !email.includes('@')) { alert(t.invalidEmail); return; }
+  try { localStorage.setItem('seatx_last_email', email); } catch (_) { }
+  await renderUserAlertsList(email, 'acc-alerts-result', lang);
+}
+
+// Re-pull the alerts feed when the Alerts tab is opened or refresh tapped.
+async function loadAlertsFeed() {
+  const target = document.getElementById('alerts-list');
+  if (!target) return;
+  try {
+    const r = await fetch('/api/feed');
+    const data = await r.json();
+    const items = (data.logs || []).slice(0, 30);
+    if (items.length === 0) {
+      target.innerHTML = '<div class="afeed-empty"><div style="font-size:36px;opacity:.35;margin-bottom:10px">🔔</div><div style="color:#fff;font-weight:700;font-size:15px;margin-bottom:6px">السوق هادي حالياً</div><div>لما تصير حركة، تظهر هنا فورًا.</div></div>';
+      return;
+    }
+    target.innerHTML = items.map(f => {
+      const cls = f.type === 'alert_sent' ? 'afeed-item afeed-alert'
+                : f.type === 'status_change' ? 'afeed-item afeed-hot'
+                : 'afeed-item';
+      const t2 = new Date(f.createdAt);
+      const time = String(t2.getHours()).padStart(2, '0') + ':' + String(t2.getMinutes()).padStart(2, '0');
+      return '<div class="' + cls + '"><div class="afeed-msg">' + escapeHtmlClient(f.message || '') + '</div><div class="afeed-time">' + time + '</div></div>';
+    }).join('');
+  } catch (e) { /* keep last state */ }
+}
+
+// Restore previously-used email so the watching/account tabs feel personal.
+function prefillSavedEmail() {
+  try {
+    const e = localStorage.getItem('seatx_last_email');
+    if (!e) return;
+    const w = document.getElementById('watch-email');
+    const a = document.getElementById('acc-email');
+    if (w) w.value = e;
+    if (a) a.value = e;
+  } catch (_) { }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   // Arabic-first: load AR by default. User can toggle EN via the nav switch.
   setLang('ar');
   initTimers();
   animateScoreBars();
   startRotatingPlaceholder();
+  prefillSavedEmail();
+  // Initial tab = home. switchTab also handles the .active-tab class set we
+  // ship in the static HTML (everything tagged data-tab="home" already has
+  // .active-tab), so this is a no-op on first paint but keeps state aligned.
+  switchTab('home');
   initPush();
 });
 </script>
