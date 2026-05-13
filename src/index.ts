@@ -373,7 +373,7 @@ h1 em{color:var(--lime);font-style:normal;display:block}
 .empty-sub{font-size:13px;line-height:1.7}
 @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
 .skeleton{background:linear-gradient(90deg,rgba(255,255,255,.04) 25%,rgba(255,255,255,.08) 50%,rgba(255,255,255,.04) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:18px;height:280px;border:1px solid var(--border)}
-.quick-hero{background:linear-gradient(180deg,rgba(163,230,53,.06),transparent);border-bottom:1px solid var(--border);padding:20px 32px}
+.quick-hero{background:linear-gradient(180deg,rgba(163,230,53,.06),transparent);border-bottom:1px solid var(--border);padding:14px 32px}
 .qh-inner{max-width:680px;margin:0 auto;text-align:center}
 .qh-label{font-family:var(--mono);font-size:11px;color:var(--lime);margin-bottom:12px;text-transform:uppercase;letter-spacing:.1em}
 .qh-row{display:flex;gap:8px}
@@ -436,17 +436,17 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
   nav{padding:0 16px;height:60px}
   .events-grid{grid-template-columns:1fr}
   .steps-grid{grid-template-columns:1fr}
-  .quick-hero{padding:22px 16px}
-  .qh-row{flex-direction:column;gap:10px}
+  .quick-hero{padding:14px 16px}
+  .qh-row{flex-direction:column;gap:8px}
   .stats-row{flex-wrap:wrap}
   .stat-block{min-width:50%;padding:16px 18px}
   .nav-r .obtn{display:none}
   /* Typography +30% bump for thumb readability */
-  .qh-label{font-size:12px;margin-bottom:14px;letter-spacing:.08em}
-  .qh-input{padding:15px 18px;font-size:16px}
-  .qh-btn{padding:15px 22px;font-size:15px;font-weight:800}
-  .qh-or{font-size:13px;margin-top:14px}
-  .qh-demo{font-size:13px}
+  .qh-label{font-size:10.5px;margin-bottom:9px;letter-spacing:.08em}
+  .qh-input{padding:12px 14px;font-size:16px}
+  .qh-btn{padding:12px 18px;font-size:14px;font-weight:800}
+  .qh-or{font-size:12px;margin-top:9px}
+  .qh-demo{font-size:12px}
   .hero-sub{font-size:17px;line-height:1.75}
   .hero-btns{gap:12px;flex-direction:column}
   .hero-btns .gbtn,.hero-btns .obtn{padding:15px 24px;font-size:15px;border-radius:12px;width:100%}
@@ -501,8 +501,10 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
   .nav-r .gbtn,.nav-r .obtn{display:none}
 }
 
-/* ─── BOTTOM NAV (always visible — app-like primary navigation) ───── */
-.bnav{position:fixed;bottom:0;left:0;right:0;height:62px;background:rgba(8,10,14,.97);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-top:1px solid var(--border);display:flex;align-items:stretch;justify-content:space-around;z-index:200;padding:0 6px;font-family:'IBM Plex Sans Arabic',sans-serif;padding-bottom:env(safe-area-inset-bottom,0)}
+/* ─── BOTTOM NAV (MOBILE ONLY — hidden on desktop entirely) ───────── */
+/* position:fixed with high z-index so it floats above all page chrome.
+   !important guards against any inherited rule that might break fixed pos. */
+.bnav{position:fixed !important;bottom:0 !important;left:0 !important;right:0 !important;top:auto !important;height:64px;background:rgba(8,10,14,.97);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-top:1px solid var(--border);display:none;align-items:stretch;justify-content:space-around;z-index:9999;padding:0 6px;font-family:'IBM Plex Sans Arabic',sans-serif;padding-bottom:env(safe-area-inset-bottom,0);box-shadow:0 -8px 24px rgba(0,0,0,.5)}
 .bnav-item{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--muted2);cursor:pointer;font-family:inherit;font-size:10.5px;font-weight:700;background:none;border:none;padding:8px 4px 6px;transition:color .15s;line-height:1}
 .bnav-item.active{color:var(--lime)}
 .bnav-icon{font-size:19px;line-height:1}
@@ -510,8 +512,17 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
 .bnav-fab-wrap{flex:1.15;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;cursor:pointer;border:none;background:none;font-family:inherit;padding:0}
 .bnav-fab{width:52px;height:52px;border-radius:50%;background:var(--lime);color:#000;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:300;margin:-18px 0 4px;box-shadow:0 8px 22px rgba(163,230,53,.42);border:3px solid var(--bg);line-height:1}
 .bnav-fab-label{font-size:10.5px;font-weight:700;color:var(--lime);line-height:1}
-body{padding-bottom:84px}
-@media(min-width:961px){.bnav{max-width:520px;left:50%;transform:translateX(-50%);margin-bottom:12px;border-radius:18px;height:58px;border:1px solid var(--border);box-shadow:0 8px 32px rgba(0,0,0,.4)}body{padding-bottom:92px}}
+/* Mobile: show bnav, reserve space at bottom of body */
+@media(max-width:960px){.bnav{display:flex}body{padding-bottom:84px}}
+/* Desktop: no bottom bar — top nav owns navigation via .nav-tabs */
+@media(min-width:961px){.bnav{display:none !important}body{padding-bottom:0}}
+
+/* ─── DESKTOP TOP-NAV TABS (≥961px only) ─────────────────────────── */
+.nav-tabs{display:none;gap:3px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:3px;font-family:'IBM Plex Sans Arabic',sans-serif}
+.ntab{background:none;border:none;border-radius:7px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;color:var(--muted2);font-family:inherit;transition:all .15s;white-space:nowrap}
+.ntab:hover{color:#fff}
+.ntab.active{background:rgba(163,230,53,.12);color:var(--lime)}
+@media(min-width:961px){.nav-tabs{display:flex}}
 
 /* ─── TCARD (compact trending card, Bloomberg-style) ─────────────── */
 .tcards-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;max-width:880px;margin-left:auto;margin-right:auto;padding:0 4px}
@@ -580,13 +591,19 @@ body{padding-bottom:84px}
     <div class="lbox">X</div>
     <div><div class="lname">SEAT<em>X</em></div></div>
   </a>
+  <!-- Desktop-only horizontal tab nav (≥961px). Mobile uses the .bnav at bottom. -->
+  <div class="nav-tabs" id="ntabs">
+    <button class="ntab active" data-target="home" onclick="switchTab('home')" id="ntab-home">الرئيسية</button>
+    <button class="ntab" data-target="trending" onclick="switchTab('trending')" id="ntab-trending">الأكثر تداولًا</button>
+    <button class="ntab" data-target="watching" onclick="switchTab('watching')" id="ntab-watching">مراقباتي</button>
+    <button class="ntab" data-target="alerts" onclick="switchTab('alerts')" id="ntab-alerts">التنبيهات</button>
+  </div>
   <div class="nav-r">
     <div class="ltog">
       <button class="lb" onclick="setLang('en')">EN</button>
       <button class="lb on" onclick="setLang('ar')">AR</button>
     </div>
-    <button class="obtn" id="n-si" onclick="switchTab('account')">تنبيهاتي</button>
-    <button class="gbtn" id="n-st" onclick="switchTab('home');setTimeout(function(){scrollTo('add')},80)">ابدأ المتابعة</button>
+    <button class="obtn" id="n-si" onclick="switchTab('account')">حسابي</button>
   </div>
 </nav>
 
@@ -858,7 +875,7 @@ const SHARE_BASE = location.origin;
 
 const T = {
   en: {
-    navMyAlerts: 'My Alerts', navStart: 'Start watching',
+    navMyAlerts: 'Account', navStart: 'Start watching',
     qhLabel: '🎫 Track any event — free',
     qhBtn: 'Start watching free →',
     qhOr: 'or ', qhDemo: 'try a demo event',
@@ -937,7 +954,7 @@ const T = {
     whyL3Zero: 'Watching live — every move reaches you',
   },
   ar: {
-    navMyAlerts: 'تنبيهاتي', navStart: 'ابدأ المتابعة',
+    navMyAlerts: 'حسابي', navStart: 'ابدأ المتابعة',
     qhLabel: '🎫 تتبع أي فعالية — مجانًا',
     qhBtn: 'ابدأ المتابعة مجاناً ←',
     qhOr: 'أو ', qhDemo: 'جرّب فعالية تجريبية',
@@ -1032,7 +1049,10 @@ function setLang(l) {
   document.body.className = isAr ? 'ar' : 'en';
   document.querySelectorAll('.lb').forEach((b, i) => b.classList.toggle('on', i === (isAr ? 1 : 0)));
   const t = T[l];
-  s('n-si', t.navMyAlerts); s('n-st', t.navStart);
+  s('n-si', t.navMyAlerts);
+  // Desktop top-nav tabs (.ntab) — mirror tab labels
+  s('ntab-home', t.tabHome); s('ntab-trending', t.tabTrending);
+  s('ntab-watching', t.tabWatching); s('ntab-alerts', t.tabAlerts);
   s('qhl', t.qhLabel); s('qh-btn', t.qhBtn); s('qh-or', t.qhOr); s('qh-demo', t.qhDemo);
   // Don't set qh-url placeholder here — startRotatingPlaceholder owns it so
   // it rotates through Saudi-flavored prompts (الهلال × النصر / ويبوك / موسم الرياض / UFC).
@@ -1658,8 +1678,12 @@ function switchTab(name) {
     if (el.dataset.tab === name) el.classList.add('active-tab');
     else el.classList.remove('active-tab');
   });
-  // Highlight active bnav item
+  // Highlight active bnav item (mobile)
   document.querySelectorAll('.bnav-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.target === name);
+  });
+  // Highlight active ntab item (desktop top nav)
+  document.querySelectorAll('.ntab').forEach(el => {
     el.classList.toggle('active', el.dataset.target === name);
   });
   // Scroll to top on tab switch (app-like)
