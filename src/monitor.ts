@@ -12,6 +12,27 @@ import { recordSignalOutcome } from './learning';
 import { recordSuccess, recordError } from './reliability';
 import { Event, SignalResult, SourceInfo, SourceParser } from './types';
 
+// Per-domain throttle: track the last fetch timestamp per hostname so a
+// cycle with many events on the same domain doesn't hammer the vendor.
+// Lives in-process (resets on restart, which is fine — it's anti-burst, not
+// audit). MIN_GAP_MS = minimum interval between two requests to the same host.
+const domainLastFetch = new Map<string, number>();
+const DOMAIN_MIN_GAP_MS = 3000;
+
+async function throttleByDomain(url: string): Promise<void> {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    const last = domainLastFetch.get(host) || 0;
+    const elapsed = Date.now() - last;
+    if (elapsed < DOMAIN_MIN_GAP_MS) {
+      await new Promise(r => setTimeout(r, DOMAIN_MIN_GAP_MS - elapsed));
+    }
+    domainLastFetch.set(host, Date.now());
+  } catch {
+    /* invalid URL — skip throttle; checkEvent will fail downstream cleanly */
+  }
+}
+
 function detectSource(url: string): SourceInfo {
   if (url.includes('webook.com')) return { sourceName: 'Webook', sourceLogo: '/logos/webook.png' };
   if (url.includes('ticketmaster')) return { sourceName: 'Ticketmaster', sourceLogo: '/logos/ticketmaster.png' };
@@ -247,13 +268,21 @@ export async function checkEvent(ev: Event): Promise<void> {
 
 export async function runMonitorCycle(): Promise<void> {
   try {
+    // Batch cap: process at most 40 events per cycle. With 800ms inter-event
+    // sleep + potential 3s domain throttle, 40 events fit comfortably in the
+    // 15s cycle interval. Overflow events get picked up by the next cycle
+    // (ordered by priority_score DESC so the most important always run first).
     const { rows } = await pool.query(
       `SELECT * FROM events
        WHERE next_check_at IS NULL OR next_check_at <= NOW()
-       ORDER BY priority_score DESC, demand_score DESC`
+       ORDER BY priority_score DESC, demand_score DESC
+       LIMIT 40`
     );
 
     for (const ev of rows) {
+      // Per-domain throttle BEFORE the actual fetch. Two events on the same
+      // host now wait 3s minimum between them, regardless of cycle pacing.
+      await throttleByDomain(ev.event_url);
       await checkEvent(ev as Event);
       const planInterval = ev.plan_type === 'lifetime' ? 10
   : ev.plan_type === 'pro' ? 15

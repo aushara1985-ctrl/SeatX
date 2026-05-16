@@ -1,4 +1,5 @@
 import express, { Request, Response } from 'express';
+import { createHash } from 'crypto';
 import { pool, setupDB, getActiveEventCount } from './db';
 import { runMonitorCycle } from './monitor';
 import { getActivityFeed, logActivity } from './feed';
@@ -30,6 +31,31 @@ function isValidEmail(e: unknown): e is string {
   return typeof e === 'string'
     && e.length <= 254
     && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+}
+
+// Hash email for use in rate-limit keys + abuse logs. We never log raw emails
+// (privacy); the truncated SHA1 is enough to correlate events without exposing
+// the address. Lowercased + trimmed so the same email maps to one bucket.
+function hashEmail(e: string): string {
+  return createHash('sha1').update(e.toLowerCase().trim()).digest('hex').slice(0, 12);
+}
+
+// Allowed ticket vendor domains. Env-driven via ALLOWED_TICKET_DOMAINS so we
+// can widen the list without redeploy. Suffix match: 'webook.com' matches
+// 'webook.com' and 'sa.webook.com'. Anything outside this list is rejected at
+// /api/events — this is the strongest single anti-abuse measure (kills fake
+// event spam AND prevents SSRF-style outbound scraping of arbitrary URLs).
+const TICKET_DOMAINS: string[] = (process.env.ALLOWED_TICKET_DOMAINS ||
+  'webook.com,ticketmaster.sa,ticketmaster.com,platinumlist.net,eventbrite.com,ticketmx.com,coca-cola-arena.com')
+  .split(',').map(d => d.trim().toLowerCase()).filter(Boolean);
+
+function isAllowedTicketDomain(url: string): boolean {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return TICKET_DOMAINS.some(d => host === d || host.endsWith('.' + d));
+  } catch {
+    return false;
+  }
 }
 
 function escapeHtml(s: string): string {
@@ -1923,6 +1949,17 @@ app.post('/api/events', async (req: Request, res: Response) => {
     if (!isValidUrl(eventUrl)) {
       return res.status(400).json({ error: 'invalid_url', message: 'URL must be valid http(s)' });
     }
+    // Domain allowlist — only accept events from known ticket vendors.
+    // Anything else is rejected here (kills fake-event spam + outbound SSRF).
+    if (!isAllowedTicketDomain(eventUrl)) {
+      let blockedHost = '';
+      try { blockedHost = new URL(eventUrl).hostname; } catch { }
+      console.warn('[abuse] /api/events disallowed domain:', getIP(req), blockedHost);
+      return res.status(400).json({
+        error: 'unsupported_domain',
+        message: 'هذا المصدر غير مدعوم. ندعم حاليًا: webook.com، ticketmaster.sa/com، platinumlist.net، إلخ.',
+      });
+    }
     const r = await pool.query(
       'INSERT INTO events (title, event_url) VALUES ($1, $2) RETURNING *',
       [title.trim(), eventUrl.trim()]
@@ -1945,6 +1982,12 @@ app.post('/api/subscribe', async (req: Request, res: Response) => {
     }
     if (!isValidEmail(email)) {
       return res.status(400).json({ error: 'invalid_email', message: 'Enter a valid email' });
+    }
+    // Per-email rate limit (second tier — IP-only doesn't help if attacker has
+    // proxies but is targeting one victim email).
+    if (!rateLimit('sub-email:' + hashEmail(email), 5, 60_000)) {
+      console.warn('[abuse] /api/subscribe per-email rate hit:', getIP(req), hashEmail(email));
+      return res.status(429).json({ error: 'rate_limit', message: 'Too many requests for this email' });
     }
 
     // Already subscribed to this exact event? idempotent success.
@@ -1998,6 +2041,17 @@ app.get('/api/my-alerts', async (req: Request, res: Response) => {
     if (!isValidEmail(email)) {
       return res.status(400).json({ error: 'invalid_email' });
     }
+    // Per-email rate limit — slows watchlist enumeration if an attacker
+    // discovers a target email (10 lookups / hour / email is plenty for
+    // normal users who refresh the page).
+    const eh = hashEmail(email);
+    if (!rateLimit('mya-email:' + eh, 10, 3600_000)) {
+      console.warn('[abuse] /api/my-alerts per-email rate hit:', getIP(req), eh);
+      return res.status(429).json({ error: 'rate_limit', message: 'Too many lookups for this email' });
+    }
+    // Hashed access log — useful for spotting abuse patterns later without
+    // leaking real emails to logs.
+    console.log('[my-alerts] access:', getIP(req), eh);
     const r = await pool.query(
       `SELECT s.event_id, s.monitoring_status, s.created_at, e.title, e.status, e.demand_band
        FROM subscriptions s
@@ -2036,7 +2090,12 @@ app.post('/api/waitlist', async (req: Request, res: Response) => {
   }
 });
 
-app.get('/api/feed', async (_req: Request, res: Response) => {
+app.get('/api/feed', async (req: Request, res: Response) => {
+  // Public + polled by every connected client every 8s. Rate limit per IP
+  // (60/min = ~1/s, well above the 8s poll rate but blocks abuse bots).
+  if (!rateLimit('feed:' + getIP(req), 60, 60_000)) {
+    return res.status(429).json({ error: 'rate_limit' });
+  }
   try {
     const feed = await getActivityFeed(20);
     res.json({ logs: feed });
