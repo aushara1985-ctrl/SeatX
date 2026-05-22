@@ -234,6 +234,18 @@ function getHTML(events: any[], feed: any[], alerts24h: number = 0): string {
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;0,9..40,900;1,9..40,400&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+/* ─── GLOBAL TAP/LINK DEFAULTS ────────────────────────────────────
+   Fix sources of mobile interaction breakage:
+   - <a> with no explicit color → browser default purple on :visited
+   - 300ms tap delay on iOS without touch-action
+   - default gray tap-flash overlay
+   - SVG inside buttons capturing clicks (Safari quirk)
+*/
+a{color:inherit;text-decoration:none}
+a:visited{color:inherit}
+button,a,input,select,textarea{-webkit-tap-highlight-color:rgba(163,230,53,.18)}
+button,a,[role=button]{touch-action:manipulation;cursor:pointer}
+button svg,a svg{pointer-events:none}
 :root{
   --bg:#080a0e;
   --bg2:#0d1018;
@@ -268,6 +280,9 @@ nav{position:sticky;top:0;z-index:100;border-bottom:1px solid var(--border);back
 .gbtn:hover{background:var(--lime2);transform:translateY(-1px)}
 .obtn{background:none;border:1px solid var(--border2);border-radius:8px;padding:7px 14px;font-size:13px;color:var(--muted3);cursor:pointer;transition:all .15s;font-family:inherit}
 .obtn:hover{border-color:rgba(255,255,255,.2);color:#fff}
+/* Icon-only variant for top-nav account (docs/design.md §5: no clutter) */
+.obtn.obtn-icon{padding:0;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:9px}
+.obtn.obtn-icon svg{width:18px;height:18px;display:block}
 .ticker-wrap{border-bottom:1px solid var(--border);background:rgba(163,230,53,.03);overflow:hidden;height:30px;display:flex;align-items:center}
 .ticker{display:flex;gap:0;animation:tick 30s linear infinite;white-space:nowrap}
 .ticker-item{font-family:var(--mono);font-size:10px;color:var(--muted2);padding:0 24px;border-right:1px solid var(--border);display:flex;align-items:center;gap:6px}
@@ -399,17 +414,21 @@ h1 em{color:var(--lime);font-style:normal;display:block}
 .empty-sub{font-size:13px;line-height:1.7}
 @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
 .skeleton{background:linear-gradient(90deg,rgba(255,255,255,.04) 25%,rgba(255,255,255,.08) 50%,rgba(255,255,255,.04) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:18px;height:280px;border:1px solid var(--border)}
-.quick-hero{background:linear-gradient(180deg,rgba(163,230,53,.06),transparent);border-bottom:1px solid var(--border);padding:14px 32px}
-.qh-inner{max-width:680px;margin:0 auto;text-align:center}
-.qh-label{font-family:var(--mono);font-size:11px;color:var(--lime);margin-bottom:12px;text-transform:uppercase;letter-spacing:.1em}
+/* Quick-hero — utility market-access input, not a landing hero.
+   docs/design.md §9: ≤80px on iPhone SE. Label hidden by default,
+   demo link hidden on mobile. */
+.quick-hero{background:transparent;border-bottom:1px solid var(--border);padding:10px 32px}
+.qh-inner{max-width:680px;margin:0 auto}
+.qh-label{display:none}
 .qh-row{display:flex;gap:8px}
-.qh-input{flex:1;min-width:0;background:rgba(255,255,255,.06);border:1px solid rgba(163,230,53,.3);border-radius:10px;padding:13px 18px;font-size:14px;font-family:'DM Sans',sans-serif;color:#fff;outline:none}
+.qh-input{flex:1;min-width:0;background:rgba(255,255,255,.04);border:1px solid var(--border2);border-radius:10px;padding:10px 14px;font-size:14px;font-family:'IBM Plex Sans Arabic',sans-serif;color:#fff;outline:none}
 .qh-input::placeholder{color:var(--muted)}
-.qh-input:focus{border-color:var(--lime);background:rgba(163,230,53,.05)}
-.qh-btn{background:var(--lime);border:none;border-radius:10px;padding:13px 22px;font-size:14px;font-weight:700;color:#000;cursor:pointer;white-space:nowrap;font-family:inherit}
+.qh-input:focus{border-color:rgba(163,230,53,.35);background:rgba(163,230,53,.03)}
+.qh-btn{background:var(--lime);border:none;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;color:#000;cursor:pointer;white-space:nowrap;font-family:inherit}
 .qh-btn:hover{background:var(--lime2)}
-.qh-or{font-size:12px;color:var(--muted2);margin-top:10px}
-.qh-demo{background:none;border:none;color:var(--lime);font-size:12px;cursor:pointer;text-decoration:underline;font-family:'DM Sans',sans-serif}
+.qh-or{font-size:11px;color:var(--muted2);margin-top:6px;text-align:center}
+.qh-demo{background:none;border:none;color:var(--muted3);font-size:11px;cursor:pointer;text-decoration:underline;font-family:inherit}
+.qh-demo:hover{color:var(--lime)}
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:300;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);padding:16px}
 .modal-box{background:var(--bg2);border:1px solid rgba(163,230,53,.2);border-radius:20px;padding:28px;max-width:420px;width:100%;text-align:center;max-height:85vh;overflow-y:auto}
 .modal-title{font-size:20px;font-weight:800;color:#fff;margin-bottom:8px}
@@ -462,17 +481,19 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
   nav{padding:0 16px;height:60px}
   .events-grid{grid-template-columns:1fr}
   .steps-grid{grid-template-columns:1fr}
-  .quick-hero{padding:14px 16px}
-  .qh-row{flex-direction:column;gap:8px}
+  .quick-hero{padding:8px 14px}
+  .qh-row{flex-direction:row;gap:6px}
+  /* Hide "or try demo" on mobile — quick-hero is utility, not landing. */
+  #qh-or-wrap{display:none}
+  /* Bump tiny tap targets on mobile (lang toggle was 20x30px — below 44 min). */
+  .lb{padding:8px 13px;font-size:12.5px}
+  .ltog{padding:3px}
   .stats-row{flex-wrap:wrap}
   .stat-block{min-width:50%;padding:16px 18px}
   .nav-r .obtn{display:none}
   /* Typography +30% bump for thumb readability */
-  .qh-label{font-size:10.5px;margin-bottom:9px;letter-spacing:.08em}
-  .qh-input{padding:12px 14px;font-size:16px}
-  .qh-btn{padding:12px 18px;font-size:14px;font-weight:800}
-  .qh-or{font-size:12px;margin-top:9px}
-  .qh-demo{font-size:12px}
+  .qh-input{padding:10px 12px;font-size:16px}
+  .qh-btn{padding:10px 14px;font-size:13px;font-weight:700}
   .hero-sub{font-size:17px;line-height:1.75}
   .hero-btns{gap:12px;flex-direction:column}
   .hero-btns .gbtn,.hero-btns .obtn{padding:15px 24px;font-size:15px;border-radius:12px;width:100%}
@@ -527,20 +548,26 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
   .nav-r .gbtn,.nav-r .obtn{display:none}
 }
 
-/* ─── BOTTOM NAV (MOBILE ONLY — hidden on desktop entirely) ───────── */
-/* position:fixed with high z-index so it floats above all page chrome.
-   !important guards against any inherited rule that might break fixed pos. */
-.bnav{position:fixed !important;bottom:0 !important;left:0 !important;right:0 !important;top:auto !important;height:64px;background:rgba(8,10,14,.97);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-top:1px solid var(--border);display:none;align-items:stretch;justify-content:space-around;z-index:9999;padding:0 6px;font-family:'IBM Plex Sans Arabic',sans-serif;padding-bottom:env(safe-area-inset-bottom,0);box-shadow:0 -8px 24px rgba(0,0,0,.5)}
-.bnav-item{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--muted2);cursor:pointer;font-family:inherit;font-size:10.5px;font-weight:700;background:none;border:none;padding:8px 4px 6px;transition:color .15s;line-height:1}
-.bnav-item.active{color:var(--lime)}
-.bnav-icon{font-size:19px;line-height:1}
-.bnav-label{font-size:10.5px;line-height:1;white-space:nowrap}
-.bnav-fab-wrap{flex:1.15;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;cursor:pointer;border:none;background:none;font-family:inherit;padding:0}
-.bnav-fab{width:52px;height:52px;border-radius:50%;background:var(--lime);color:#000;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:300;margin:-18px 0 4px;box-shadow:0 8px 22px rgba(163,230,53,.42);border:3px solid var(--bg);line-height:1}
-.bnav-fab-label{font-size:10.5px;font-weight:700;color:var(--lime);line-height:1}
-/* Mobile: show bnav, reserve space at bottom of body */
-@media(max-width:960px){.bnav{display:flex}body{padding-bottom:84px}}
-/* Desktop: no bottom bar — top nav owns navigation via .nav-tabs */
+/* ─── BOTTOM NAV — terminal-minimal, mobile only ────────────────────── */
+/* See docs/design.md §5: 54-58px height · outline SVG icons · subtle 2px
+   lime underline ABOVE icon on active · no fill background · no glow. */
+.bnav{position:fixed !important;bottom:0 !important;left:0 !important;right:0 !important;top:auto !important;height:60px;background:rgba(8,10,14,.98);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--border);display:none;align-items:stretch;justify-content:space-around;z-index:9999;padding:0;padding-bottom:env(safe-area-inset-bottom,0);font-family:'IBM Plex Sans Arabic',sans-serif}
+.bnav-item{flex:1;min-width:0;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--muted2);cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;background:none;border:none;padding:9px 4px 7px;transition:color .12s ease;line-height:1}
+/* Active indicator: 2px subtle lime underline directly above the icon. */
+.bnav-item::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:0;height:2px;background:var(--lime);transition:width .15s ease;border-radius:0 0 2px 2px}
+/* Active state: lime + bumped weight + subtle text shadow for the SeatX CTA
+   feel. NO purple, NO heavy fill, NO glow. Inactive stays muted gray. */
+.bnav-item.active{color:var(--lime);font-weight:800}
+.bnav-item.active .bnav-label{font-weight:800}
+.bnav-item.active::before{width:32px}
+/* Icon + label MUST not capture touch events themselves — Safari/iOS sometimes
+   refuse to bubble click from inline SVG up to the parent button. pointer-events
+   none on children = clicks always register on the button. */
+.bnav-icon{width:20px;height:20px;display:block;flex-shrink:0;color:currentColor;pointer-events:none}
+.bnav-label{font-size:12px;line-height:1;white-space:nowrap;letter-spacing:0;pointer-events:none}
+.bnav-item *{pointer-events:none}
+.bnav-item{cursor:pointer}
+@media(max-width:960px){.bnav{display:flex}body{padding-bottom:76px}}
 @media(min-width:961px){.bnav{display:none !important}body{padding-bottom:0}}
 
 /* ─── DESKTOP TOP-NAV TABS (≥961px only) ─────────────────────────── */
@@ -595,6 +622,18 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
 .acc-ltog button{background:none;border:none;border-radius:7px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;color:var(--muted2);font-family:inherit;transition:all .15s}
 .acc-ltog button.on{background:var(--lime);color:#000}
 
+/* ─── WATCHING TAB rows (separate from afeed) ─────────────────────── */
+.watch-row{display:flex;align-items:center;gap:12px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;transition:opacity .15s ease}
+.watch-row + .watch-row{margin-top:8px}
+.watch-row-main{flex:1;min-width:0}
+.watch-row-title{font-size:14px;font-weight:800;color:#fff;line-height:1.3;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.watch-row-meta{font-size:11.5px;color:var(--muted2);font-weight:500}
+.watch-row-actions{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.watch-act{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9px;background:rgba(255,255,255,.04);border:1px solid var(--border);cursor:pointer;color:var(--muted3);text-decoration:none;font-family:inherit;transition:all .12s ease;padding:0}
+.watch-act svg{width:16px;height:16px;display:block}
+.watch-act:hover{background:rgba(255,255,255,.08);color:#fff;border-color:var(--border2)}
+.watch-act-stop:hover{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3);color:#f87171}
+
 /* ─── ALERTS FEED ─────────────────────────────────────────────────── */
 .afeed-list{display:flex;flex-direction:column;gap:8px;max-width:640px;margin:0 auto}
 .afeed-item{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;gap:11px;align-items:flex-start;font-size:13.5px;line-height:1.55;color:#e4e4e7}
@@ -629,7 +668,12 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
       <button class="lb" onclick="setLang('en')">EN</button>
       <button class="lb on" onclick="setLang('ar')">AR</button>
     </div>
-    <button class="obtn" id="n-si" onclick="switchTab('account')">حسابي</button>
+    <button class="obtn obtn-icon" id="n-si" onclick="switchTab('account')" aria-label="حسابي" title="حسابي">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="8" r="4"/>
+        <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/>
+      </svg>
+    </button>
   </div>
 </nav>
 
@@ -764,22 +808,36 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
   </div>
 </div>
 
-<!-- ════ ACCOUNT TAB — login lookup + lang + pricing + about ═══════ -->
+<!-- ════ ACCOUNT TAB — settings only (no email lookup; see Watching tab) ═══════ -->
 <div class="section" data-tab="account">
   <div style="text-align:center;margin-bottom:22px">
     <div class="section-title" id="acc-title">حسابي</div>
-    <p style="font-size:13px;color:var(--muted2);margin-top:6px" id="acc-subtitle">إعداداتك ووصولك للسوق المباشر</p>
+    <p style="font-size:13px;color:var(--muted2);margin-top:6px" id="acc-subtitle">إعداداتك في السوق</p>
   </div>
 
-  <!-- Email lookup → user's tracked events -->
+  <!-- Plan status (read-only for MVP) -->
   <div class="acc-block">
-    <div class="acc-h" id="acc-alerts-h">تنبيهاتي</div>
-    <div class="acc-sub" id="acc-alerts-sub">اكتب بريدك لرؤية الفعاليات اللي تتابعها.</div>
-    <div class="acc-row">
-      <input type="email" class="modal-input" id="acc-email" placeholder="your@email.com" autocomplete="email" style="margin-bottom:0"/>
-      <button class="gbtn" style="padding:13px 24px;font-size:14px;border-radius:11px;white-space:nowrap" onclick="accLookup()" id="acc-lookup-btn">عرض</button>
+    <div class="acc-h" id="acc-plan-h">خطتك الحالية</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:6px">
+      <div>
+        <div id="acc-plan-name" style="font-size:18px;font-weight:800;color:#fff;line-height:1.2">مجاني</div>
+        <div id="acc-plan-limit" style="font-size:11.5px;color:var(--muted2);margin-top:4px;font-family:var(--mono)">فعالية واحدة نشطة كحد أقصى</div>
+      </div>
+      <button class="gbtn" style="padding:10px 16px;font-size:13px;border-radius:10px;white-space:nowrap" onclick="openUpgradeModal('pro')" id="acc-upgrade-btn">الترقية</button>
     </div>
-    <div id="acc-alerts-result" style="margin-top:14px"></div>
+  </div>
+
+  <!-- Notification status (push permission + saved email indicator) -->
+  <div class="acc-block">
+    <div class="acc-h" id="acc-notif-h">التنبيهات</div>
+    <div id="acc-notif-push" style="display:flex;align-items:center;gap:8px;font-size:13px;color:#a1a1aa;margin-top:6px">
+      <span class="market-monitor" id="acc-notif-push-dot" style="display:none"></span>
+      <span id="acc-notif-push-text">جاري الفحص…</span>
+    </div>
+    <div id="acc-notif-email" style="display:flex;align-items:center;gap:8px;font-size:13px;color:#a1a1aa;margin-top:8px">
+      <span id="acc-notif-email-text">جاري الفحص…</span>
+    </div>
+    <div id="acc-notif-hint" style="font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.65" data-default-ar="فعّل التنبيهات من خلال الاشتراك بأول فعالية في تبويب «الرئيسية»." data-default-en="Enable alerts by subscribing to your first event on the Home tab.">فعّل التنبيهات من خلال الاشتراك بأول فعالية في تبويب «الرئيسية».</div>
   </div>
 
   <!-- Language toggle -->
@@ -870,26 +928,41 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
 
 <footer id="ftr">© 2026 SEATX · BUILT FOR FANS · 🇸🇦 SAUDI ARABIA</footer>
 
-<!-- ════ BOTTOM NAV — mobile primary navigation (5 tabs) ═══════════ -->
-<nav class="bnav" id="bnav" role="navigation">
-  <button class="bnav-item active" data-target="home" onclick="switchTab('home')">
-    <div class="bnav-icon">🏠</div>
+<!-- ════ BOTTOM NAV — terminal-minimal, mobile only ════════════════ -->
+<!-- See docs/design.md §5. Outline SVG icons, no emoji, no fills, no glow. -->
+<nav class="bnav" id="bnav" role="navigation" aria-label="Primary">
+  <button class="bnav-item active" data-target="home" onclick="switchTab('home')" aria-label="الرئيسية">
+    <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M3 9.6L12 3l9 6.6V20a1 1 0 0 1-1 1h-5v-7h-6v7H4a1 1 0 0 1-1-1V9.6z"/>
+    </svg>
     <div class="bnav-label" id="bnav-home">الرئيسية</div>
   </button>
-  <button class="bnav-item" data-target="trending" onclick="switchTab('trending')">
-    <div class="bnav-icon">📈</div>
+  <button class="bnav-item" data-target="trending" onclick="switchTab('trending')" aria-label="الأكثر تداولًا">
+    <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <polyline points="3 17 9 11 13 15 21 7"/>
+      <polyline points="14 7 21 7 21 14"/>
+    </svg>
     <div class="bnav-label" id="bnav-trending">الأكثر تداولًا</div>
   </button>
-  <button class="bnav-item" data-target="watching" onclick="switchTab('watching')">
-    <div class="bnav-icon">👁</div>
+  <button class="bnav-item" data-target="watching" onclick="switchTab('watching')" aria-label="مراقباتي">
+    <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/>
+      <circle cx="12" cy="12" r="3"/>
+    </svg>
     <div class="bnav-label" id="bnav-watching">مراقباتي</div>
   </button>
-  <button class="bnav-item" data-target="alerts" onclick="switchTab('alerts')">
-    <div class="bnav-icon">🔔</div>
+  <button class="bnav-item" data-target="alerts" onclick="switchTab('alerts')" aria-label="التنبيهات">
+    <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+      <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+    </svg>
     <div class="bnav-label" id="bnav-alerts">التنبيهات</div>
   </button>
-  <button class="bnav-item" data-target="account" onclick="switchTab('account')">
-    <div class="bnav-icon">👤</div>
+  <button class="bnav-item" data-target="account" onclick="switchTab('account')" aria-label="حسابي">
+    <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="12" cy="8" r="4"/>
+      <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/>
+    </svg>
     <div class="bnav-label" id="bnav-account">حسابي</div>
   </button>
 </nav>
@@ -972,8 +1045,17 @@ const T = {
     alertsTitle: 'Alerts', alertsRefresh: 'Refresh',
     alertsEmptyTitle: 'Quiet market right now', alertsEmptyBody: 'Any move and it shows up here instantly.',
     // Account tab
-    accTitle: 'My account', accSubtitle: 'Your settings and market access',
-    accAlertsH: 'My alerts', accAlertsSub: 'Enter your email to see events you are tracking.', accLookupBtn: 'Show',
+    accTitle: 'My account', accSubtitle: 'Your settings',
+    accPlanH: 'Current plan', accPlanName: 'Free', accPlanLimit: '1 active event maximum',
+    accUpgradeBtn: 'Upgrade',
+    accNotifH: 'Alerts',
+    notifPushOn: '✓ Live push alerts enabled',
+    notifPushOff: '○ Push alerts not enabled yet',
+    notifPushBlocked: '○ Browser blocked push notifications',
+    notifPushUnsupported: 'Push not supported on this device',
+    notifEmailOn: '📧 ',
+    notifEmailOff: '○ No email saved yet',
+    accNotifHint: 'Enable alerts by subscribing to your first event on the Home tab.',
     accLangH: 'Language',
     // Why-now zero-state
     whyMonitor: 'Market under monitoring',
@@ -1051,8 +1133,17 @@ const T = {
     alertsTitle: 'التنبيهات', alertsRefresh: 'تحديث',
     alertsEmptyTitle: 'السوق هادي حالياً', alertsEmptyBody: 'لما تصير حركة، تظهر هنا فورًا.',
     // Account tab
-    accTitle: 'حسابي', accSubtitle: 'إعداداتك ووصولك للسوق المباشر',
-    accAlertsH: 'تنبيهاتي', accAlertsSub: 'اكتب بريدك لرؤية الفعاليات اللي تتابعها.', accLookupBtn: 'عرض',
+    accTitle: 'حسابي', accSubtitle: 'إعداداتك في السوق',
+    accPlanH: 'خطتك الحالية', accPlanName: 'مجاني', accPlanLimit: 'فعالية واحدة نشطة كحد أقصى',
+    accUpgradeBtn: 'الترقية',
+    accNotifH: 'التنبيهات',
+    notifPushOn: '✓ تنبيهات لحظية مفعّلة',
+    notifPushOff: '○ تنبيهات الويب غير مفعّلة بعد',
+    notifPushBlocked: '○ تنبيهات الويب محجوبة من المتصفح',
+    notifPushUnsupported: 'الجهاز لا يدعم تنبيهات الويب',
+    notifEmailOn: '📧 ',
+    notifEmailOff: '○ ما اتسجّل بريد بعد',
+    accNotifHint: 'فعّل التنبيهات من خلال الاشتراك بأول فعالية في تبويب «الرئيسية».',
     accLangH: 'اللغة',
     // Why-now zero-state
     whyMonitor: 'السوق قيد المراقبة',
@@ -1075,7 +1166,9 @@ function setLang(l) {
   document.body.className = isAr ? 'ar' : 'en';
   document.querySelectorAll('.lb').forEach((b, i) => b.classList.toggle('on', i === (isAr ? 1 : 0)));
   const t = T[l];
-  s('n-si', t.navMyAlerts);
+  // n-si is now icon-only (docs/design.md §5). Set aria-label/title only.
+  var nsi = document.getElementById('n-si');
+  if (nsi) { nsi.setAttribute('aria-label', t.navMyAlerts); nsi.setAttribute('title', t.navMyAlerts); }
   // Desktop top-nav tabs (.ntab) — mirror tab labels
   s('ntab-home', t.tabHome); s('ntab-trending', t.tabTrending);
   s('ntab-watching', t.tabWatching); s('ntab-alerts', t.tabAlerts);
@@ -1121,10 +1214,15 @@ function setLang(l) {
   s('watch-sub', t.watchSub); s('watch-btn', t.watchBtn);
   // Alerts tab
   s('alerts-title', t.alertsTitle); s('alerts-refresh', t.alertsRefresh);
-  // Account tab
+  // Account tab — settings only (no email lookup; lives in Watching tab now)
   s('acc-title', t.accTitle); s('acc-subtitle', t.accSubtitle);
-  s('acc-alerts-h', t.accAlertsH); s('acc-alerts-sub', t.accAlertsSub);
-  s('acc-lookup-btn', t.accLookupBtn); s('acc-lang-h', t.accLangH);
+  s('acc-plan-h', t.accPlanH); s('acc-plan-name', t.accPlanName);
+  s('acc-plan-limit', t.accPlanLimit); s('acc-upgrade-btn', t.accUpgradeBtn);
+  s('acc-notif-h', t.accNotifH); s('acc-lang-h', t.accLangH);
+  s('acc-notif-hint', t.accNotifHint);
+  // Notification status text is owned by renderAccountStatus() — re-run after
+  // lang switch so the message reflects current state in the chosen language.
+  if (typeof renderAccountStatus === 'function') renderAccountStatus();
   // Account language toggle reflects current lang
   document.querySelectorAll('.acc-ltog button').forEach((b, i) => b.classList.toggle('on', i === (isAr ? 1 : 0)));
   // Why-now zero-state copy (only present when alerts_24h was 0 at SSR)
@@ -1716,14 +1814,28 @@ function switchTab(name) {
   window.scrollTo({ top: 0, behavior: 'instant' });
   // Lazy-load tab data on demand
   if (name === 'alerts') loadAlertsFeed();
+  if (name === 'account') renderAccountStatus();
+  if (name === 'watching') {
+    // Auto-load if we already have a saved email — saves a manual step.
+    try {
+      var savedEmail = localStorage.getItem('seatx_last_email') || '';
+      var watchEmailEl = document.getElementById('watch-email');
+      if (savedEmail && watchEmailEl) {
+        watchEmailEl.value = savedEmail;
+        renderUserAlertsList(savedEmail, 'watch-list', lang);
+      }
+    } catch (_) { }
+  }
   if (name === 'home') {
     // Re-focus the quick-hero input so users can paste immediately
     setTimeout(() => document.getElementById('qh-url')?.focus(), 80);
   }
 }
 
-// Render a list of subscribed events into a target container. Reuses
-// /api/my-alerts which was added in Phase 1.
+// Render the user's subscribed events into a target container. Each row gets
+// two actions: open (the ticket page in a new tab) and stop (DELETE the
+// subscription via /api/unsubscribe). The email is encoded into the unstop
+// button's onclick so we don't depend on stale closures.
 async function renderUserAlertsList(email, targetId, lang) {
   const target = document.getElementById(targetId);
   if (!target) return;
@@ -1737,6 +1849,10 @@ async function renderUserAlertsList(email, targetId, lang) {
       target.innerHTML = '<div class="afeed-empty"><div style="font-size:32px;opacity:.35;margin-bottom:10px">👁</div><div style="color:#fff;font-weight:700;font-size:14px;margin-bottom:6px">لسه ما تتابع أي فعالية</div><div style="font-size:13px">روح للرئيسية وألصق رابط أول فعالية.</div></div>';
       return;
     }
+    // Email is NOT inlined into onclick (would force quote-escaping inside the
+    // outer SSR template literal — that path produces broken JS, exactly the
+    // failure mode we just removed). The handler reads the saved email from
+    // localStorage instead. watchLookup() always stores it before this renders.
     target.innerHTML = '<div class="afeed-list">' + items.map(a => {
       const band = a.demand_band || 'low';
       const heat = band === 'very_high' ? '🔥 ملتهب'
@@ -1745,7 +1861,22 @@ async function renderUserAlertsList(email, targetId, lang) {
                   : '○ هادي';
       const status = a.status === 'available' ? '⚡ متاح'
                    : a.status === 'maybe_available' ? '👀 ربما' : '○ قيد المراقبة';
-      return '<div class="afeed-item"><div class="afeed-msg"><div style="font-weight:800;color:#fff;font-size:14px;margin-bottom:3px">' + escapeHtmlClient(a.title) + '</div><div style="font-size:11.5px;color:var(--muted2)">' + status + ' · ' + heat + '</div></div><a class="tcards-h-sub" href="/event/' + a.event_id + (lang === 'ar' ? '?lang=ar' : '') + '" target="_blank" rel="noopener" style="text-decoration:none">→</a></div>';
+      const safeUrl = a.event_url ? escapeHtmlClient(a.event_url) : '#';
+      return ''
+        + '<div class="watch-row" data-event-id="' + a.event_id + '">'
+        +   '<div class="watch-row-main">'
+        +     '<div class="watch-row-title">' + escapeHtmlClient(a.title) + '</div>'
+        +     '<div class="watch-row-meta">' + status + ' · ' + heat + '</div>'
+        +   '</div>'
+        +   '<div class="watch-row-actions">'
+        +     '<a class="watch-act watch-act-open" href="' + safeUrl + '" target="_blank" rel="noopener" title="فتح صفحة التذاكر" aria-label="فتح صفحة التذاكر">'
+        +       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M10 14L21 3"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/></svg>'
+        +     '</a>'
+        +     '<button class="watch-act watch-act-stop" onclick="unsubscribeFromEvent(' + a.event_id + ', this)" title="إيقاف المتابعة" aria-label="إيقاف المتابعة">'
+        +       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>'
+        +     '</button>'
+        +   '</div>'
+        + '</div>';
     }).join('') + '</div>';
   } catch (e) {
     target.innerHTML = '<div style="color:#f87171;font-size:13px;text-align:center;padding:14px">تعذّر التحميل — جرّب مرة ثانية</div>';
@@ -1760,22 +1891,75 @@ async function watchLookup() {
   await renderUserAlertsList(email, 'watch-list', lang);
 }
 
-async function accLookup() {
-  const t = T[lang];
-  const email = document.getElementById('acc-email')?.value?.trim();
-  if (!email || !email.includes('@')) { alert(t.invalidEmail); return; }
-  try { localStorage.setItem('seatx_last_email', email); } catch (_) { }
-  await renderUserAlertsList(email, 'acc-alerts-result', lang);
+// Stop tracking one event. Email is read from localStorage (saved by
+// watchLookup before this renders) — avoids the broken inline-quote pattern
+// that previously killed the entire <script> block with SyntaxError.
+async function unsubscribeFromEvent(eventId, btnEl) {
+  let email = '';
+  try { email = localStorage.getItem('seatx_last_email') || ''; } catch (_) { }
+  if (!email || !email.includes('@')) return;
+  // Optimistic UI: dim the row immediately
+  const row = btnEl && btnEl.closest && btnEl.closest('.watch-row');
+  if (row) { row.style.opacity = '.4'; row.style.pointerEvents = 'none'; }
+  try {
+    await fetch('/api/unsubscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ eventId: eventId, email: email }),
+    });
+    await renderUserAlertsList(email, 'watch-list', lang);
+  } catch (e) {
+    if (row) { row.style.opacity = '1'; row.style.pointerEvents = ''; }
+  }
+}
+
+// Render the Account tab's notification status block. Reads from
+// Notification.permission + localStorage seatx_last_email — no server call.
+function renderAccountStatus() {
+  const t = T[lang] || {};
+  // Push permission status
+  const pushText = document.getElementById('acc-notif-push-text');
+  const pushDot  = document.getElementById('acc-notif-push-dot');
+  if (pushText) {
+    if (!('Notification' in window)) {
+      pushText.textContent = t.notifPushUnsupported || 'الجهاز لا يدعم تنبيهات الويب';
+      if (pushDot) pushDot.style.display = 'none';
+    } else if (Notification.permission === 'granted') {
+      pushText.textContent = t.notifPushOn || '✓ تنبيهات لحظية مفعّلة';
+      if (pushDot) pushDot.style.display = 'inline-flex';
+    } else if (Notification.permission === 'denied') {
+      pushText.textContent = t.notifPushBlocked || '○ تنبيهات الويب محجوبة من المتصفح';
+      if (pushDot) pushDot.style.display = 'none';
+    } else {
+      pushText.textContent = t.notifPushOff || '○ تنبيهات الويب غير مفعّلة بعد';
+      if (pushDot) pushDot.style.display = 'none';
+    }
+  }
+  // Email status (from localStorage)
+  const emailText = document.getElementById('acc-notif-email-text');
+  let savedEmail = '';
+  try { savedEmail = localStorage.getItem('seatx_last_email') || ''; } catch (_) { }
+  if (emailText) {
+    if (savedEmail) {
+      emailText.textContent = (t.notifEmailOn || '📧 ') + savedEmail;
+    } else {
+      emailText.textContent = t.notifEmailOff || '○ ما اتسجّل بريد بعد';
+    }
+  }
 }
 
 // Re-pull the alerts feed when the Alerts tab is opened or refresh tapped.
+// Filters out 'metadata_updated' — that's housekeeping noise, not a market
+// movement. Alerts tab shows ONLY: status_change, alert_sent, watcher_added.
 async function loadAlertsFeed() {
   const target = document.getElementById('alerts-list');
   if (!target) return;
   try {
     const r = await fetch('/api/feed');
     const data = await r.json();
-    const items = (data.logs || []).slice(0, 30);
+    const items = (data.logs || [])
+      .filter(f => f.type === 'status_change' || f.type === 'alert_sent' || f.type === 'watcher_added' || f.type === 'availability_detected' || f.type === 'demand_spike')
+      .slice(0, 30);
     if (items.length === 0) {
       target.innerHTML = '<div class="afeed-empty"><div style="font-size:36px;opacity:.35;margin-bottom:10px">🔔</div><div style="color:#fff;font-weight:700;font-size:15px;margin-bottom:6px">السوق هادي حالياً</div><div>لما تصير حركة، تظهر هنا فورًا.</div></div>';
       return;
@@ -2053,7 +2237,7 @@ app.get('/api/my-alerts', async (req: Request, res: Response) => {
     // leaking real emails to logs.
     console.log('[my-alerts] access:', getIP(req), eh);
     const r = await pool.query(
-      `SELECT s.event_id, s.monitoring_status, s.created_at, e.title, e.status, e.demand_band
+      `SELECT s.event_id, s.monitoring_status, s.created_at, e.title, e.status, e.demand_band, e.event_url
        FROM subscriptions s
        JOIN events e ON e.id = s.event_id
        WHERE s.email = $1
@@ -2062,6 +2246,45 @@ app.get('/api/my-alerts', async (req: Request, res: Response) => {
       [email]
     );
     res.json({ alerts: r.rows });
+  } catch (e: any) {
+    res.status(500).json({ error: 'server_error', message: e.message });
+  }
+});
+
+// Stop tracking — used from the Watching tab's per-row إيقاف button.
+// Deletes the subscription row + decrements watchers_count atomically.
+app.post('/api/unsubscribe', async (req: Request, res: Response) => {
+  try {
+    if (!rateLimit('unsub:' + getIP(req), 20, 60_000)) {
+      return res.status(429).json({ error: 'rate_limit', message: 'Too many requests' });
+    }
+    const { eventId, email } = req.body || {};
+    const idNum = parseInt(String(eventId), 10);
+    if (!Number.isFinite(idNum) || idNum <= 0) {
+      return res.status(400).json({ error: 'invalid_event_id' });
+    }
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ error: 'invalid_email' });
+    }
+    // Per-email second-tier limit (mirrors /api/subscribe per security commit
+    // 0e95473). Prevents subscribe↔unsubscribe spam cycles against a victim
+    // email from rotating proxies.
+    if (!rateLimit('unsub-email:' + hashEmail(email), 5, 60_000)) {
+      console.warn('[abuse] /api/unsubscribe per-email rate hit:', getIP(req), hashEmail(email));
+      return res.status(429).json({ error: 'rate_limit', message: 'Too many requests for this email' });
+    }
+    const del = await pool.query(
+      'DELETE FROM subscriptions WHERE event_id=$1 AND email=$2 RETURNING id',
+      [idNum, email]
+    );
+    const removed = (del.rowCount ?? 0) > 0;
+    if (removed) {
+      await pool.query(
+        'UPDATE events SET watchers_count = GREATEST(watchers_count - 1, 0) WHERE id = $1',
+        [idNum]
+      );
+    }
+    res.json({ success: true, removed });
   } catch (e: any) {
     res.status(500).json({ error: 'server_error', message: e.message });
   }
@@ -2233,10 +2456,25 @@ app.get('/event/:id', async (req: Request, res: Response) => {
 // =============================================================================
 const PORT = parseInt(process.env.PORT || '3000', 10);
 app.listen(PORT, async () => {
-  await setupDB();
   console.log(`SeatX running on port ${PORT}`);
-  setTimeout(async () => {
-    try { await runMonitorCycle(); } catch (e) { console.error('[monitor] cycle error:', e); }
-    setInterval(() => { runMonitorCycle().catch(e => console.error('[monitor]', e)); }, 15000);
-  }, 5000);
+  // setupDB is best-effort. If Postgres is unreachable (e.g., local dev
+  // without DATABASE_URL set), log and continue — the server still boots
+  // and serves the UI. Routes that touch the DB already swallow query
+  // failures and degrade to empty-state UI.
+  try {
+    await setupDB();
+  } catch (e: any) {
+    console.warn('[startup] setupDB skipped (Postgres unreachable):', e?.message || String(e));
+    console.warn('[startup] UI will render with empty data; routes hitting the DB will return empty/error.');
+  }
+  // Monitor cycle is also DB-dependent — only start it if setupDB succeeded.
+  // Otherwise we'd spam the console with reconnect errors every 15s.
+  if (process.env.DATABASE_URL) {
+    setTimeout(async () => {
+      try { await runMonitorCycle(); } catch (e) { console.error('[monitor] cycle error:', e); }
+      setInterval(() => { runMonitorCycle().catch(e => console.error('[monitor]', e)); }, 15000);
+    }, 5000);
+  } else {
+    console.warn('[startup] DATABASE_URL not set — monitor cycle disabled for this run.');
+  }
 });
