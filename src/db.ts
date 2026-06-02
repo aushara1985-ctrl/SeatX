@@ -105,6 +105,22 @@ export async function setupDB(): Promise<void> {
       last_used_at TIMESTAMPTZ DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS idx_push_email ON push_subscriptions(email);
+
+    -- Queue Mode submissions: user is stuck in someone else's queue and
+    -- wants us to watch for a SECOND opportunity on the same event
+    -- (another link, new drop, different package). We never claim to jump
+    -- the queue. See docs/design.md and the customer-facing disclaimer.
+    CREATE TABLE IF NOT EXISTS queue_watch (
+      id SERIAL PRIMARY KEY,
+      email TEXT NOT NULL,
+      event_name TEXT NOT NULL,
+      source TEXT,
+      queue_position TEXT,
+      queue_url TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_qw_email ON queue_watch(email);
+    CREATE INDEX IF NOT EXISTS idx_qw_created ON queue_watch(created_at DESC);
   `);
 
   const migrations = [
