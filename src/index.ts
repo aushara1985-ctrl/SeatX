@@ -634,6 +634,30 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
 .watch-act:hover{background:rgba(255,255,255,.08);color:#fff;border-color:var(--border2)}
 .watch-act-stop:hover{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3);color:#f87171}
 
+/* ─── QUEUE MODE — segmented source picker (replaces native select) ── */
+.qm-seg{display:flex;gap:6px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:11px;padding:4px;margin-bottom:14px}
+.qm-seg-btn{flex:1;min-height:44px;background:none;border:1px solid transparent;color:var(--muted3);font-size:13.5px;font-weight:700;cursor:pointer;border-radius:8px;font-family:inherit;transition:all .12s ease;padding:8px 6px;line-height:1}
+.qm-seg-btn:hover{color:#fff}
+.qm-seg-btn.on{background:rgba(163,230,53,.12);color:var(--lime);border-color:rgba(163,230,53,.25)}
+@media(max-width:600px){.qm-seg-btn{font-size:13px}}
+
+/* ─── QUEUE MODE — post-submit result card ──────────────────────────── */
+.qm-result-card{background:var(--bg2);border:1px solid rgba(163,230,53,.22);border-radius:14px;padding:18px;margin-top:14px}
+.qm-result-title{font-size:16px;font-weight:800;color:var(--lime);margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.qm-result-title::before{content:'✓';font-size:16px;font-weight:900;width:22px;height:22px;border-radius:50%;background:rgba(163,230,53,.15);display:inline-flex;align-items:center;justify-content:center;line-height:1}
+.qm-result-body{font-size:13.5px;color:#d4d4d8;line-height:1.7;margin-bottom:14px}
+.qm-result-summary{display:flex;flex-direction:column;gap:8px;padding:12px 14px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;margin-bottom:14px}
+.qm-result-summary-row{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:12.5px;line-height:1.4}
+.qm-result-summary-row span{color:var(--muted2);font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.08em}
+.qm-result-summary-row strong{color:#fff;font-weight:700;text-align:left;direction:ltr;max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ar .qm-result-summary-row strong{text-align:right;direction:rtl}
+.qm-result-watch-title{font-size:12px;font-weight:700;color:var(--muted3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;font-family:var(--mono)}
+.ar .qm-result-watch-title{letter-spacing:0;font-family:'IBM Plex Sans Arabic',sans-serif}
+.qm-result-watch-list{list-style:none;padding:0;margin:0 0 14px;font-size:13px;color:#d4d4d8;line-height:1.85}
+.qm-result-disclaimer{font-size:11.5px;color:var(--muted);line-height:1.6;padding-top:12px;border-top:1px solid var(--border)}
+.qm-result-again{display:block;background:none;border:none;color:var(--lime);font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;margin:12px auto 0;text-decoration:underline}
+.qm-result-again:hover{color:var(--lime2)}
+
 /* ─── ALERTS FEED ─────────────────────────────────────────────────── */
 .afeed-list{display:flex;flex-direction:column;gap:8px;max-width:640px;margin:0 auto}
 .afeed-item{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;gap:11px;align-items:flex-start;font-size:13.5px;line-height:1.55;color:#e4e4e7}
@@ -679,12 +703,12 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
 
 <div class="quick-hero active-tab" data-tab="home">
   <div class="qh-inner">
-    <div class="qh-label" id="qhl">🎫 Track any event — free</div>
+    <div class="qh-label" id="qhl">🔔 ألصق رابط الحدث — ننبّهك إذا رجعت المقاعد</div>
     <div class="qh-row">
-      <input class="qh-input" id="qh-url" type="url" placeholder="Paste ticket link here..." autocomplete="off"/>
-      <button class="qh-btn" id="qh-btn" onclick="quickAdd()">Start watching free →</button>
+      <input class="qh-input" id="qh-url" type="url" placeholder="ألصق رابط الحدث هنا" autocomplete="off"/>
+      <button class="qh-btn" id="qh-btn" onclick="quickAdd()">نبّهني إذا رجعت ←</button>
     </div>
-    <div class="qh-or" id="qh-or-wrap"><span id="qh-or">or </span><button class="qh-demo" id="qh-demo" onclick="tryDemo()">try a demo event</button></div>
+    <div class="qh-or" id="qh-or-wrap"><span id="qh-or">أو </span><button class="qh-demo" id="qh-demo" onclick="tryDemo()">جرّب بفعالية تجريبية</button></div>
   </div>
 </div>
 
@@ -705,11 +729,11 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
 <section class="hero active-tab" data-tab="home">
   <div class="hero-left">
     <div class="eyebrow-pill"><div class="pulse-dot"></div><span id="ep">Saudi seat market · Live</span></div>
-    <h1><span id="hm">اعرف قبل</span><em id="ha">ما تطير المقاعد.</em></h1>
-    <p class="hero-sub" id="hs">ذكاء سوق مباشر لتذاكر المباريات والحفلات والفعاليات في السعودية. نراقب كل حركة عشان تمسك التذاكر لحظة رجوعها — قبل أي شخص ثاني.</p>
+    <h1><span id="hm">لا تفوّت التذكرة</span><em id="ha">إذا رجعت.</em></h1>
+    <p class="hero-sub" id="hs">SeatX يتابع الحدث وينبهك إذا ظهرت فرصة: مقاعد رجعت، ضغط ارتفع، أو حركة جديدة على نفس الحدث.</p>
     <div class="hero-btns">
-      <button class="gbtn" id="hb1" onclick="scrollTo('add')">Start watching free</button>
-      <button class="obtn" id="hb2" onclick="scrollTo('evs')">View live events ↓</button>
+      <button class="gbtn" id="hb1" onclick="scrollTo('add')">ابدأ المتابعة</button>
+      <button class="obtn" id="hb2" onclick="scrollTo('queue-mode')">أنا داخل كيو</button>
     </div>
     <div class="stats-row">
       <div class="stat-block">
@@ -729,8 +753,8 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
   <div class="market-panel">
     <div class="mp-header">
       <div>
-        <div class="mp-title" id="mpt">Live seat market</div>
-        <div class="mp-sub" id="mps">Updating every few seconds</div>
+        <div class="mp-title" id="mpt">فرص الحدث</div>
+        <div class="mp-sub" id="mps">آخر حركة قبل ثوانٍ</div>
       </div>
       <div class="live-badge"><div class="live-dot"></div>LIVE</div>
     </div>
@@ -755,29 +779,80 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
 
 <div class="section active-tab" id="add" data-tab="home">
   <div class="add-form">
-    <div class="form-title" id="ft1">Track any event</div>
-    <div class="form-sub" id="ft2">We alert you the moment seats become available.</div>
-    <label class="form-label" id="fl1">Event title</label>
-    <input class="form-input" type="text" id="ev-t" placeholder="Al Nassr vs Al Hilal" maxlength="200"/>
-    <label class="form-label" id="fl2">Ticket URL</label>
-    <input class="form-input" type="url" id="ev-u" placeholder="https://webook.com/..." maxlength="2000"/>
-    <button class="gbtn" style="width:100%;padding:12px;font-size:14px;border-radius:10px" onclick="addEvent()" id="afb">🎟 Track this event</button>
-    <div class="form-note" id="fn">Free · No account needed · Real-time alerts</div>
+    <div class="form-title" id="ft1">عندي رابط الحدث</div>
+    <div class="form-sub" id="ft2">ألصق رابط ويبوك أو تيكت ماستر، وSeatX ينبّهك إذا رجعت المقاعد.</div>
+    <label class="form-label" id="fl1">اسم الحدث</label>
+    <input class="form-input" type="text" id="ev-t" placeholder="مثال: الهلال × النصر" maxlength="200"/>
+    <label class="form-label" id="fl2">رابط التذاكر</label>
+    <input class="form-input" type="url" id="ev-u" placeholder="ألصق رابط الحدث" maxlength="2000"/>
+    <button class="gbtn" style="width:100%;padding:12px;font-size:14px;border-radius:10px" onclick="addEvent()" id="afb">🔔 نبّهني إذا رجعت المقاعد</button>
+    <div class="form-note" id="fn">مجاني · بدون حساب · تنبيهات لحظية</div>
+  </div>
+</div>
+
+<!-- ════ QUEUE MODE — for users stuck in someone else's waiting room ═══
+     IMPORTANT: copy makes no promise of jumping the queue, buying for
+     them, or guaranteeing tickets. We only watch for a SECOND opportunity
+     on the same event (different link, new drop, different package). -->
+<div class="section active-tab" id="queue-mode" data-tab="home">
+  <div class="add-form" style="max-width:560px">
+    <div class="form-title" id="qm-title">داخل كيو ورقمك بعيد؟</div>
+    <div class="form-sub" id="qm-sub">SeatX ما يقدر يقدّمك في الطابور. لكن نقدر نبحث لك عن فرصة ثانية لنفس الحدث: رابط رسمي آخر، دفعة جديدة، باقة مختلفة، أو تغير مهم في التوفر.</div>
+
+    <ul style="list-style:none;padding:0;margin:6px 0 16px;font-size:12.5px;color:var(--muted3);line-height:1.85" id="qm-bullets">
+      <li>· ما نتجاوز الطابور</li>
+      <li>· نبحث عن فرص ثانية لنفس الحدث</li>
+      <li>· ننبّهك إذا ظهر مسار رسمي مختلف</li>
+      <li>· نساعدك تعرف هل الانتظار يستاهل</li>
+    </ul>
+
+    <label class="form-label" id="qm-l-name">اسم الحدث</label>
+    <input class="form-input" type="text" id="qm-event" placeholder="مثال: حفلة محمد عبده، UFC Riyadh" maxlength="200"/>
+
+    <label class="form-label" id="qm-l-source">المصدر اللي أنت منتظر فيه</label>
+    <!-- Native <select> renders white-and-blue on dark in Chrome/Safari; not
+         themeable. Replaced with segmented buttons that live inside the dark
+         identity. Hidden input below carries the chosen value to the form. -->
+    <div class="qm-seg" role="radiogroup" aria-labelledby="qm-l-source">
+      <button type="button" class="qm-seg-btn" data-value="webook" onclick="qmSetSource('webook',this)">Webook</button>
+      <button type="button" class="qm-seg-btn" data-value="ticketmaster" onclick="qmSetSource('ticketmaster',this)">Ticketmaster</button>
+      <button type="button" class="qm-seg-btn" data-value="other" onclick="qmSetSource('other',this)" id="qm-seg-other">غير ذلك</button>
+    </div>
+    <input type="hidden" id="qm-source" value=""/>
+
+    <label class="form-label" id="qm-l-pos">رقمك في الانتظار <span style="color:var(--muted);font-weight:400">(اختياري)</span></label>
+    <input class="form-input" type="text" id="qm-pos" placeholder="مثال: 24,500" maxlength="40"/>
+
+    <label class="form-label" id="qm-l-url">رابط الكيو <span style="color:var(--muted);font-weight:400">(اختياري)</span></label>
+    <input class="form-input" type="url" id="qm-url" placeholder="ألصق رابط الانتظار" maxlength="2000"/>
+
+    <label class="form-label" id="qm-l-email">بريدك للتنبيه</label>
+    <input class="form-input" type="email" id="qm-email" placeholder="your@email.com" autocomplete="email"/>
+
+    <button class="gbtn" style="width:100%;padding:12px;font-size:14px;border-radius:10px" onclick="queueModeSubmit()" id="qm-btn">ابحث عن فرصة ثانية</button>
+
+    <div id="qm-confirm" style="display:none;margin-top:14px;padding:12px 14px;border-radius:10px;background:rgba(163,230,53,.06);border:1px solid rgba(163,230,53,.2);font-size:13px;color:#e4e4e7;line-height:1.7" data-default-ar="تمام. خلّك في الكيو إذا تبغى، وSeatX بيراقب أي فرصة ثانية حول نفس الحدث. إذا ظهر رابط آخر، دفعة جديدة، باقة مختلفة، أو تغير مهم في التوفر، بننبّهك." data-default-en="Done. Stay in the queue if you want — SeatX is now watching for a second opportunity on the same event. If another link, a new drop, a different package, or a meaningful availability change appears, we'll notify you."></div>
+
+    <div class="form-note" id="qm-disclaimer" style="margin-top:10px;color:var(--muted)">SeatX لا يتجاوز الكيو، لا يشتري بدالك، ولا يضمن التذاكر.</div>
   </div>
 </div>
 
 <!-- ════ TRENDING TAB — Bloomberg-style compact cards ═══════════════ -->
 <div class="section" id="trending" data-tab="trending">
   <div class="tcards-head">
-    <div class="tcards-h-title" id="trnd-t">الأكثر تداولًا الآن</div>
-    <a class="tcards-h-sub" href="#" onclick="event.preventDefault();switchTab('watching')" id="trnd-link">عرض الكل</a>
+    <div class="tcards-h-title" id="trnd-t">فعاليات ممكن ترجع فيها فرص</div>
+    <a class="tcards-h-sub" href="#" onclick="event.preventDefault();switchTab('watching')" id="trnd-link">مراقباتي ←</a>
   </div>
   <div class="tcards-list" id="tcards-list">
     ${events.length === 0 ? `
     <div class="afeed-empty" id="trnd-empty">
-      <div style="font-size:38px;opacity:.35;margin-bottom:12px">📊</div>
-      <div style="color:#fff;font-weight:700;font-size:15px;margin-bottom:6px">السوق هادي حالياً</div>
-      <div style="font-size:13px">أضف أول فعالية من الـ + في الأسفل، ونبدأ نراقبها لحظياً.</div>
+      <div style="font-size:38px;opacity:.35;margin-bottom:12px">🔔</div>
+      <div id="trnd-empty-title" style="color:#fff;font-weight:700;font-size:15px;margin-bottom:6px">ما فيه فرص مرصودة الآن</div>
+      <div id="trnd-empty-body" style="font-size:13px;margin-bottom:18px;max-width:380px;margin-left:auto;margin-right:auto">أضف أول حدث تبي تتابعه، وإذا رجعت مقاعد أو ظهرت فرصة رسمية بننبّهك.</div>
+      <div style="display:flex;flex-direction:column;gap:8px;max-width:280px;margin:0 auto">
+        <button class="gbtn" style="padding:12px 16px;font-size:14px;border-radius:10px;width:100%" onclick="goHomeAndAddEvent()" id="trnd-empty-cta">أضف حدث للمتابعة</button>
+        <button class="obtn" style="padding:11px 16px;font-size:13.5px;border-radius:10px;width:100%" onclick="goHomeAndQueueMode()" id="trnd-empty-cta2">أنا داخل كيو</button>
+      </div>
     </div>` : events.map((e: any) => renderTrendingCard(e)).join('')}
   </div>
 </div>
@@ -913,8 +988,9 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
     ${feed.length === 0 ? `
     <div class="afeed-empty">
       <div style="font-size:36px;opacity:.35;margin-bottom:10px">🔔</div>
-      <div style="color:#fff;font-weight:700;font-size:15px;margin-bottom:6px">السوق هادي حالياً</div>
-      <div>لما تصير حركة، تظهر هنا فورًا.</div>
+      <div style="color:#fff;font-weight:700;font-size:15px;margin-bottom:6px">ما فيه تنبيهات حتى الآن</div>
+      <div style="margin-bottom:18px;max-width:380px;margin-left:auto;margin-right:auto">إذا رجعت مقاعد أو ظهرت فرصة على حدث تتابعه، بنعرض التنبيه هنا.</div>
+      <button class="gbtn" style="padding:12px 18px;font-size:14px;border-radius:10px;max-width:260px" onclick="goHomeAndAddEvent()">أضف حدث للمتابعة</button>
     </div>` : feed.slice(0, 30).map((f: any) => {
       const cls = f.type === 'alert_sent' ? 'afeed-item afeed-alert'
                 : f.type === 'status_change' ? 'afeed-item afeed-hot'
@@ -975,22 +1051,22 @@ const SHARE_BASE = location.origin;
 const T = {
   en: {
     navMyAlerts: 'Account', navStart: 'Start watching',
-    qhLabel: '🎫 Track any event — free',
-    qhBtn: 'Start watching free →',
+    qhLabel: '🔔 Paste a ticket link — we alert you if seats return',
+    qhBtn: 'Notify me if seats return →',
     qhOr: 'or ', qhDemo: 'try a demo event',
     qhPlaceholder: 'Paste ticket link here...',
     ep: 'Saudi seat market · Live',
-    hm: 'Know before', ha: 'seats vanish.',
-    hs: 'Real-time demand intelligence for Saudi sports, concerts, and events. We watch every move so you catch tickets the second they return — before everyone else.',
-    hb1: 'Start watching free', hb2: 'View live events ↓',
+    hm: "Don't miss the ticket", ha: 'if it comes back.',
+    hs: "SeatX watches the event and alerts you the moment an opportunity appears: seats returned, demand spiked, or a new movement on the same event.",
+    hb1: 'Start watching', hb2: "I'm in a queue",
     sl1: 'Watching now', sl2: 'Check speed', sl3: 'Events live',
-    mpt: 'Live seat market', mps: 'Updating every few seconds',
-    dbl: 'Market demand', mhl: '🔥 Hottest right now',
-    ft1: 'Track any event', ft2: 'We alert you the moment seats become available.',
-    fl1: 'Event title', fl2: 'Ticket URL',
-    afb: '🎟 Track this event', fn: 'Free · No account needed · Real-time alerts',
-    titlePh: 'Al Nassr vs Al Hilal', urlPh: 'https://webook.com/...',
-    trndE: '🔥 Trending', trndT: 'Hottest right now',
+    mpt: 'Event opportunities', mps: 'Last movement seconds ago',
+    dbl: 'Demand pressure', mhl: '🔥 Hottest right now',
+    ft1: 'I have the event link', ft2: 'Paste a Webook or Ticketmaster link — SeatX alerts you if seats return.',
+    fl1: 'Event name', fl2: 'Ticket URL',
+    afb: '🔔 Notify me if seats return', fn: 'Free · No account needed · Live alerts',
+    titlePh: 'e.g. Al Hilal vs Al Nassr', urlPh: 'Paste event link',
+    trndE: '🔥 Opportunities', trndT: 'Events where tickets might come back',
     see: 'Live events', set: 'What people are watching',
     srt1: 'Demand', srt2: 'Watchers', srt3: 'Recent',
     empt: 'No events yet', emps: 'Add the first event above to start tracking ↑',
@@ -1037,13 +1113,13 @@ const T = {
     tabHome: 'Home', tabTrending: 'Trending', tabWatching: 'Watching', tabAlerts: 'Alerts', tabAccount: 'Account',
     // Trending tab
     trendTitle: 'Hottest right now', trendLink: 'See all',
-    trendEmptyTitle: 'Quiet market right now', trendEmptyBody: 'Add the first event from the + on the home tab — we start tracking instantly.',
+    trendEmptyTitle: 'No opportunities tracked yet', trendEmptyBody: "Add the first event you want to follow — if seats return or an official opportunity appears, we'll notify you.",
     // Watching tab
     watchTitle: 'My watching', watchH: 'See your events', watchSub: 'Enter your email to see the events you are tracking — we alert you the second seats return.',
     watchBtn: 'Show', watchEmptyTitle: 'No events yet', watchEmptyBody: 'Go to Home and paste your first event link.',
     // Alerts tab
     alertsTitle: 'Alerts', alertsRefresh: 'Refresh',
-    alertsEmptyTitle: 'Quiet market right now', alertsEmptyBody: 'Any move and it shows up here instantly.',
+    alertsEmptyTitle: 'No alerts yet', alertsEmptyBody: "If seats return or an opportunity appears on an event you're watching, the alert shows here.",
     // Account tab
     accTitle: 'My account', accSubtitle: 'Your settings',
     accPlanH: 'Current plan', accPlanName: 'Free', accPlanLimit: '1 active event maximum',
@@ -1058,27 +1134,66 @@ const T = {
     accNotifHint: 'Enable alerts by subscribing to your first event on the Home tab.',
     accLangH: 'Language',
     // Why-now zero-state
-    whyMonitor: 'Market under monitoring',
-    whyL3Zero: 'Watching live — every move reaches you',
+    whyMonitor: 'Watching for opportunities',
+    whyL3Zero: 'Live — any movement reaches you',
+    // Queue Mode section (separate flow, honest disclaimer)
+    qmTitle: "Stuck in a queue with a high number?",
+    qmSub: "SeatX can't move you up the queue. But we CAN watch for a second opportunity on the same event: another official link, a new drop, a different package, or a meaningful change in availability.",
+    qmB1: "We don't bypass the queue",
+    qmB2: 'We look for a second opportunity on the same event',
+    qmB3: 'We notify you if a different official path appears',
+    qmB4: "We help you decide if the wait is worth it",
+    qmLName: 'Event name', qmLSource: 'Which source are you waiting on?',
+    qmLPos: 'Your queue position', qmLOptional: '(optional)',
+    qmLUrl: 'Queue link', qmLEmail: 'Email for alerts',
+    qmEventPh: 'e.g. Mohammed Abdu concert, UFC Riyadh',
+    qmSourcePick: 'Pick a source', qmPosPh: 'e.g. 24,500',
+    qmUrlPh: 'Paste the waiting-room link',
+    qmSubmit: 'Find me a second opportunity',
+    qmConfirm: "Done. Stay in the queue if you want — SeatX is now watching for a second opportunity on the same event. If another link, a new drop, a different package, or a meaningful availability change appears, we'll notify you.",
+    qmDisclaimer: "SeatX doesn't bypass queues, doesn't buy on your behalf, and doesn't guarantee tickets.",
+    qmNeedEvent: 'Enter the event name first',
+    // Queue Mode segmented source button (label for "Other"; vendor names stay as-is)
+    qmSegOther: 'Other',
+    // Queue Mode success card
+    qmResultTitle: 'Your request is saved',
+    qmResultBody: "SeatX is now watching for any second official opportunity around this event. If another official link, a new drop, a different package, or a meaningful availability change appears, we'll notify you.",
+    qmSummaryEvent: 'Event', qmSummarySource: 'Source', qmSummaryPosition: 'Queue position',
+    qmSummaryStatus: 'Status', qmSummaryLast: 'Last update', qmSummaryDash: '—',
+    qmStatusSearching: 'Watching for a second opportunity', qmTimeNow: 'just now',
+    qmWatchTitle: "What we're watching for",
+    qmWatchB1: 'Another official link', qmWatchB2: 'A new drop',
+    qmWatchB3: 'A different package',  qmWatchB4: 'A meaningful change in availability',
+    qmAnother: 'Submit another request',
+    // Trending empty state CTAs
+    trendEmptyCta: 'Add an event to watch', trendEmptyCta2: "I'm in a queue",
+    // Watching empty + error states
+    watchEmptyTitle: "You don't have any watches yet",
+    watchEmptyBody: 'Add an event from Home, and your watches will show here.',
+    watchErrorTitle: "We couldn't load your watches",
+    watchErrorBody: 'Double-check the email, or try again.',
+    watchErrorRetry: 'Try again',
+    // Shared empty-CTA label + loading
+    emptyCtaAdd: 'Add an event', loading: 'Loading...',
   },
   ar: {
     navMyAlerts: 'حسابي', navStart: 'ابدأ المتابعة',
-    qhLabel: '🎫 تتبع أي فعالية — مجانًا',
-    qhBtn: 'ابدأ المتابعة مجاناً ←',
+    qhLabel: '🔔 ألصق رابط الحدث — ننبّهك إذا رجعت المقاعد',
+    qhBtn: 'نبّهني إذا رجعت ←',
     qhOr: 'أو ', qhDemo: 'جرّب فعالية تجريبية',
     qhPlaceholder: 'الصق رابط التذاكر هنا...',
     ep: 'سوق المقاعد السعودي · مباشر',
-    hm: 'اعرف قبل', ha: 'ما تطير المقاعد.',
-    hs: 'ذكاء سوق مباشر لتذاكر المباريات والحفلات والفعاليات في السعودية. نراقب كل حركة عشان تمسك التذاكر لحظة رجوعها — قبل أي شخص ثاني.',
-    hb1: 'ابدأ المتابعة مجاناً', hb2: 'شوف الفعاليات ↓',
+    hm: 'لا تفوّت التذكرة', ha: 'إذا رجعت.',
+    hs: 'SeatX يتابع الحدث وينبّهك إذا ظهرت فرصة: مقاعد رجعت، ضغط ارتفع، أو حركة جديدة على نفس الحدث.',
+    hb1: 'ابدأ المتابعة', hb2: 'أنا داخل كيو',
     sl1: 'يتابعون الآن', sl2: 'سرعة الفحص', sl3: 'فعاليات مباشرة',
-    mpt: 'السوق المباشر', mps: 'يتحدث كل ثوانٍ',
-    dbl: 'الطلب في السوق', mhl: '🔥 الأكثر سخونة',
-    ft1: 'تابع أي فعالية', ft2: 'سنبعث لك تنبيهاً فور توفر المقاعد.',
-    fl1: 'اسم الفعالية', fl2: 'رابط التذاكر',
-    afb: '🎟 تابع هذه الفعالية', fn: 'مجاني · بدون حساب · تنبيهات فورية',
-    titlePh: 'النصر ضد الهلال', urlPh: 'https://webook.com/...',
-    trndE: '🔥 الأكثر تفاعلًا', trndT: 'الأسخن الآن',
+    mpt: 'فرص الحدث', mps: 'آخر حركة قبل ثوانٍ',
+    dbl: 'الضغط على الحدث', mhl: '🔥 الأقرب لفرصة الآن',
+    ft1: 'عندي رابط الحدث', ft2: 'ألصق رابط ويبوك أو تيكت ماستر، وSeatX ينبّهك إذا رجعت المقاعد.',
+    fl1: 'اسم الحدث', fl2: 'رابط التذاكر',
+    afb: '🔔 نبّهني إذا رجعت المقاعد', fn: 'مجاني · بدون حساب · تنبيهات لحظية',
+    titlePh: 'مثال: الهلال × النصر', urlPh: 'ألصق رابط الحدث',
+    trndE: '🔥 فرص', trndT: 'فعاليات ممكن ترجع فيها فرص',
     see: 'الفعاليات المباشرة', set: 'ما يتابعه الناس الآن',
     srt1: 'الطلب', srt2: 'المتابعون', srt3: 'الأحدث',
     empt: 'لا فعاليات بعد', emps: 'أضف أول فعالية للمتابعة ↑',
@@ -1125,13 +1240,13 @@ const T = {
     tabHome: 'الرئيسية', tabTrending: 'الأكثر تداولًا', tabWatching: 'مراقباتي', tabAlerts: 'التنبيهات', tabAccount: 'حسابي',
     // Trending tab
     trendTitle: 'الأكثر تداولًا الآن', trendLink: 'عرض الكل',
-    trendEmptyTitle: 'السوق هادي حالياً', trendEmptyBody: 'أضف أول فعالية من الرئيسية، ونبدأ نراقبها لحظياً.',
+    trendEmptyTitle: 'ما فيه فرص مرصودة الآن', trendEmptyBody: 'أضف أول حدث تبي تتابعه، وإذا رجعت مقاعد أو ظهرت فرصة رسمية بننبّهك.',
     // Watching tab
     watchTitle: 'مراقباتي', watchH: 'شوف فعالياتك', watchSub: 'اكتب بريدك لعرض الفعاليات اللي تتابعها — نبّهك لحظة رجوع المقاعد.',
     watchBtn: 'عرض', watchEmptyTitle: 'لسه ما تتابع أي فعالية', watchEmptyBody: 'روح للرئيسية وألصق رابط أول فعالية.',
     // Alerts tab
     alertsTitle: 'التنبيهات', alertsRefresh: 'تحديث',
-    alertsEmptyTitle: 'السوق هادي حالياً', alertsEmptyBody: 'لما تصير حركة، تظهر هنا فورًا.',
+    alertsEmptyTitle: 'ما فيه تنبيهات حتى الآن', alertsEmptyBody: 'إذا رجعت مقاعد أو ظهرت فرصة على حدث تتابعه، بنعرض التنبيه هنا.',
     // Account tab
     accTitle: 'حسابي', accSubtitle: 'إعداداتك في السوق',
     accPlanH: 'خطتك الحالية', accPlanName: 'مجاني', accPlanLimit: 'فعالية واحدة نشطة كحد أقصى',
@@ -1146,8 +1261,47 @@ const T = {
     accNotifHint: 'فعّل التنبيهات من خلال الاشتراك بأول فعالية في تبويب «الرئيسية».',
     accLangH: 'اللغة',
     // Why-now zero-state
-    whyMonitor: 'السوق قيد المراقبة',
-    whyL3Zero: 'نراقب لحظياً — أي تحرّك يصلك',
+    whyMonitor: 'نتابع الفرص',
+    whyL3Zero: 'مباشر — أي حركة توصلك',
+    // Queue Mode (نص صريح: ما نتجاوز الكيو)
+    qmTitle: 'داخل كيو ورقمك بعيد؟',
+    qmSub: 'SeatX ما يقدر يقدّمك في الطابور. لكن نقدر نبحث لك عن فرصة ثانية لنفس الحدث: رابط رسمي آخر، دفعة جديدة، باقة مختلفة، أو تغير مهم في التوفر.',
+    qmB1: 'ما نتجاوز الطابور',
+    qmB2: 'نبحث عن فرص ثانية لنفس الحدث',
+    qmB3: 'ننبّهك إذا ظهر مسار رسمي مختلف',
+    qmB4: 'نساعدك تعرف هل الانتظار يستاهل',
+    qmLName: 'اسم الحدث', qmLSource: 'المصدر اللي أنت منتظر فيه',
+    qmLPos: 'رقمك في الانتظار', qmLOptional: '(اختياري)',
+    qmLUrl: 'رابط الكيو', qmLEmail: 'بريدك للتنبيه',
+    qmEventPh: 'مثال: حفلة محمد عبده، UFC Riyadh',
+    qmSourcePick: 'اختر المصدر', qmPosPh: 'مثال: 24,500',
+    qmUrlPh: 'ألصق رابط الانتظار',
+    qmSubmit: 'ابحث عن فرصة ثانية',
+    qmConfirm: 'تمام. خلّك في الكيو إذا تبغى، وSeatX بيراقب أي فرصة ثانية حول نفس الحدث. إذا ظهر رابط آخر، دفعة جديدة، باقة مختلفة، أو تغير مهم في التوفر، بننبّهك.',
+    qmDisclaimer: 'SeatX لا يتجاوز الكيو، لا يشتري بدالك، ولا يضمن التذاكر.',
+    qmNeedEvent: 'اكتب اسم الحدث أولًا',
+    // Queue Mode segmented source button
+    qmSegOther: 'غير ذلك',
+    // Queue Mode success card
+    qmResultTitle: 'تم حفظ طلبك',
+    qmResultBody: 'SeatX بيراقب أي فرصة رسمية ثانية حول هذا الحدث. إذا ظهر رابط رسمي آخر، دفعة جديدة، باقة مختلفة، أو تغير مهم في التوفر، بننبّهك.',
+    qmSummaryEvent: 'اسم الحدث', qmSummarySource: 'المصدر', qmSummaryPosition: 'رقم الانتظار',
+    qmSummaryStatus: 'الحالة', qmSummaryLast: 'آخر تحديث', qmSummaryDash: '—',
+    qmStatusSearching: 'نبحث عن فرصة ثانية', qmTimeNow: 'الآن',
+    qmWatchTitle: 'وش نراقب؟',
+    qmWatchB1: 'رابط رسمي آخر', qmWatchB2: 'دفعة جديدة',
+    qmWatchB3: 'باقة مختلفة',    qmWatchB4: 'تغير مهم في التوفر',
+    qmAnother: 'إرسال طلب ثاني',
+    // Trending empty state CTAs
+    trendEmptyCta: 'أضف حدث للمتابعة', trendEmptyCta2: 'أنا داخل كيو',
+    // Watching empty + error states
+    watchEmptyTitle: 'ما عندك مراقبات بعد',
+    watchEmptyBody: 'أضف حدث من الرئيسية، وبعدها بتظهر مراقباتك هنا.',
+    watchErrorTitle: 'ما قدرنا نحمّل مراقباتك',
+    watchErrorBody: 'تأكد من الإيميل أو جرّب مرة ثانية.',
+    watchErrorRetry: 'جرّب مرة ثانية',
+    // Shared empty-CTA label + loading
+    emptyCtaAdd: 'أضف حدث', loading: 'جاري التحميل...',
   }
 };
 
@@ -1227,6 +1381,24 @@ function setLang(l) {
   document.querySelectorAll('.acc-ltog button').forEach((b, i) => b.classList.toggle('on', i === (isAr ? 1 : 0)));
   // Why-now zero-state copy (only present when alerts_24h was 0 at SSR)
   s('why-monitor', t.whyMonitor);
+  // Queue Mode — title, copy, bullets, labels, placeholders, disclaimer
+  s('qm-title', t.qmTitle); s('qm-sub', t.qmSub);
+  s('qm-l-name', t.qmLName); s('qm-l-source', t.qmLSource);
+  // Optional-label slots use innerHTML so the (optional) tag stays subtle.
+  var qmLPos = document.getElementById('qm-l-pos');
+  if (qmLPos) qmLPos.innerHTML = t.qmLPos + ' <span style="color:var(--muted);font-weight:400">' + t.qmLOptional + '</span>';
+  var qmLUrl = document.getElementById('qm-l-url');
+  if (qmLUrl) qmLUrl.innerHTML = t.qmLUrl + ' <span style="color:var(--muted);font-weight:400">' + t.qmLOptional + '</span>';
+  s('qm-l-email', t.qmLEmail); s('qm-btn', t.qmSubmit); s('qm-disclaimer', t.qmDisclaimer);
+  sPh('qm-event', t.qmEventPh); sPh('qm-pos', t.qmPosPh); sPh('qm-url', t.qmUrlPh);
+  // Bullet list (4 items) — re-rendered as innerHTML on lang switch.
+  var qmBul = document.getElementById('qm-bullets');
+  if (qmBul) qmBul.innerHTML = '<li>· ' + t.qmB1 + '</li><li>· ' + t.qmB2 + '</li><li>· ' + t.qmB3 + '</li><li>· ' + t.qmB4 + '</li>';
+  // Segmented source picker: only "Other" is translated (vendor names stay).
+  s('qm-seg-other', t.qmSegOther);
+  // Trending empty-state copy + CTAs (only present when events.length === 0 at SSR)
+  s('trnd-empty-title', t.trendEmptyTitle); s('trnd-empty-body', t.trendEmptyBody);
+  s('trnd-empty-cta', t.trendEmptyCta); s('trnd-empty-cta2', t.trendEmptyCta2);
   s('ftr', t.footer);
   renderCards();
 }
@@ -1481,6 +1653,109 @@ async function tryDemo() {
     if (btn) { btn.textContent = t.qhDemo; btn.disabled = false; }
     const sk = document.getElementById('sk-demo');
     if (sk) sk.remove();
+  }
+}
+
+// Segmented source picker. Writes chosen value into hidden #qm-source so the
+// existing submit handler reads it transparently.
+function qmSetSource(value, btn) {
+  const hidden = document.getElementById('qm-source');
+  if (hidden) hidden.value = value;
+  const buttons = document.querySelectorAll('.qm-seg-btn');
+  for (let i = 0; i < buttons.length; i++) buttons[i].classList.toggle('on', buttons[i] === btn);
+}
+
+// Reset Queue Mode form after submit so user can submit another. Called by the
+// "ارسل طلب ثاني" link in the success card.
+function qmResetForm() {
+  ['qm-event', 'qm-pos', 'qm-url'].forEach(id => {
+    const el = document.getElementById(id); if (el) (el).value = '';
+  });
+  const hidden = document.getElementById('qm-source'); if (hidden) hidden.value = '';
+  document.querySelectorAll('.qm-seg-btn').forEach(b => b.classList.remove('on'));
+  // Show form again, hide result
+  document.querySelectorAll('#queue-mode .form-label, #queue-mode .form-input, #queue-mode .qm-seg, #queue-mode #qm-btn, #queue-mode #qm-bullets, #queue-mode #qm-disclaimer').forEach(el => { el.style.display = ''; });
+  const conf = document.getElementById('qm-confirm');
+  if (conf) { conf.style.display = 'none'; conf.innerHTML = ''; }
+  document.getElementById('qm-event')?.focus();
+}
+
+// Build the rich success card (called from queueModeSubmit on 200).
+function qmBuildResultCard(eventName, source, queuePos) {
+  const tt = T[lang] || T.ar;
+  const sourceLabel = source === 'webook' ? 'Webook'
+                    : source === 'ticketmaster' ? 'Ticketmaster'
+                    : source === 'other' ? (tt.qmSegOther || 'غير ذلك')
+                    : (tt.qmSummaryDash || '—');
+  const posRow = queuePos ? ''
+    + '<div class="qm-result-summary-row"><span>' + (tt.qmSummaryPosition || 'رقم الانتظار') + '</span><strong>' + escapeHtmlClient(queuePos) + '</strong></div>'
+    : '';
+  return ''
+    + '<div class="qm-result-card">'
+    +   '<div class="qm-result-title">' + (tt.qmResultTitle || 'تم حفظ طلبك') + '</div>'
+    +   '<div class="qm-result-body">' + (tt.qmResultBody || 'SeatX بيراقب أي فرصة رسمية ثانية حول هذا الحدث. إذا ظهر رابط رسمي آخر، دفعة جديدة، باقة مختلفة، أو تغير مهم في التوفر، بننبّهك.') + '</div>'
+    +   '<div class="qm-result-summary">'
+    +     '<div class="qm-result-summary-row"><span>' + (tt.qmSummaryEvent || 'اسم الحدث') + '</span><strong>' + escapeHtmlClient(eventName) + '</strong></div>'
+    +     '<div class="qm-result-summary-row"><span>' + (tt.qmSummarySource || 'المصدر') + '</span><strong>' + escapeHtmlClient(sourceLabel) + '</strong></div>'
+    +     posRow
+    +     '<div class="qm-result-summary-row"><span>' + (tt.qmSummaryStatus || 'الحالة') + '</span><strong>' + (tt.qmStatusSearching || 'نبحث عن فرصة ثانية') + '</strong></div>'
+    +     '<div class="qm-result-summary-row"><span>' + (tt.qmSummaryLast || 'آخر تحديث') + '</span><strong>' + (tt.qmTimeNow || 'الآن') + '</strong></div>'
+    +   '</div>'
+    +   '<div class="qm-result-watch-title">' + (tt.qmWatchTitle || 'وش نراقب؟') + '</div>'
+    +   '<ul class="qm-result-watch-list">'
+    +     '<li>· ' + (tt.qmWatchB1 || 'رابط رسمي آخر') + '</li>'
+    +     '<li>· ' + (tt.qmWatchB2 || 'دفعة جديدة') + '</li>'
+    +     '<li>· ' + (tt.qmWatchB3 || 'باقة مختلفة') + '</li>'
+    +     '<li>· ' + (tt.qmWatchB4 || 'تغير مهم في التوفر') + '</li>'
+    +   '</ul>'
+    +   '<div class="qm-result-disclaimer">' + (tt.qmDisclaimer || 'SeatX لا يتجاوز الكيو، لا يشتري بدالك، ولا يضمن التذاكر.') + '</div>'
+    +   '<button class="qm-result-again" type="button" onclick="qmResetForm()">' + (tt.qmAnother || 'إرسال طلب ثاني') + '</button>'
+    + '</div>';
+}
+
+// Queue Mode submit — logs a request for a SECOND opportunity on the same
+// event. We don't claim to jump the queue. Posts to /api/queue-watch.
+async function queueModeSubmit() {
+  const t = T[lang];
+  const email     = document.getElementById('qm-email')?.value?.trim();
+  const eventName = document.getElementById('qm-event')?.value?.trim();
+  const source    = document.getElementById('qm-source')?.value || '';
+  const queuePos  = document.getElementById('qm-pos')?.value?.trim() || '';
+  const queueUrl  = document.getElementById('qm-url')?.value?.trim() || '';
+  if (!email || !email.includes('@')) { alert(t.invalidEmail); return; }
+  if (!eventName || eventName.length < 2) { alert(t.qmNeedEvent || 'اكتب اسم الحدث'); return; }
+  const btn = document.getElementById('qm-btn');
+  const origLabel = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = t.sending || 'جاري الإرسال...'; }
+  try {
+    const res = await fetch('/api/queue-watch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: email,
+        eventName: eventName,
+        source: source || null,
+        queuePosition: queuePos || null,
+        queueUrl: queueUrl || null,
+      }),
+    });
+    if (!res.ok) throw new Error('submit failed');
+    try { localStorage.setItem('seatx_last_email', email); } catch (_) { }
+    // Hide the form, show the rich success card with summary + watch list.
+    document.querySelectorAll('#queue-mode .form-label, #queue-mode .form-input, #queue-mode .qm-seg, #queue-mode #qm-btn, #queue-mode #qm-bullets, #queue-mode #qm-disclaimer').forEach(el => { el.style.display = 'none'; });
+    const conf = document.getElementById('qm-confirm');
+    if (conf) {
+      conf.innerHTML = qmBuildResultCard(eventName, source, queuePos);
+      conf.style.display = 'block';
+      conf.style.background = 'transparent';
+      conf.style.border = 'none';
+      conf.style.padding = '0';
+      conf.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  } catch (e) {
+    alert(t.error || 'حصل خطأ');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = origLabel || (t.qmSubmit || 'ابحث عن فرصة ثانية'); }
   }
 }
 
@@ -1794,6 +2069,29 @@ async function tryEnablePush(email) {
 // =============================================================================
 let activeTab = 'home';
 
+// Empty-state CTA helpers — used by Trending/Watching/Alerts empty cards.
+// Switching tab is instant (no animation), so we focus/scroll on a tiny
+// timeout to land after the layout settles.
+function goHomeAndAddEvent() {
+  switchTab('home');
+  setTimeout(function() {
+    const el = document.getElementById('qh-url');
+    if (el) {
+      try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) { }
+      try { el.focus(); } catch (_) { }
+    }
+  }, 100);
+}
+function goHomeAndQueueMode() {
+  switchTab('home');
+  setTimeout(function() {
+    const el = document.getElementById('queue-mode');
+    if (el) {
+      try { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) { }
+    }
+  }, 100);
+}
+
 function switchTab(name) {
   if (!name) return;
   activeTab = name;
@@ -1839,16 +2137,41 @@ function switchTab(name) {
 async function renderUserAlertsList(email, targetId, lang) {
   const target = document.getElementById(targetId);
   if (!target) return;
-  target.innerHTML = '<div style="color:var(--muted2);font-size:13px;text-align:center;padding:14px">جاري التحميل...</div>';
+  const tt = T[lang] || T.ar;
+  target.innerHTML = '<div style="color:var(--muted2);font-size:13px;text-align:center;padding:14px">' + (tt.loading || 'جاري التحميل...') + '</div>';
+  // Three terminal states: EMPTY (200 + [])  vs  HTTP/network FAILURE
+  //                       vs  successful render. Each gets its own
+  //                       distinguishable copy + appropriate CTAs. We
+  //                       previously collapsed all three into one scary
+  //                       red "تعذر التحميل" — that hid the empty case.
+  let httpResult;
   try {
-    const r = await fetch('/api/my-alerts?email=' + encodeURIComponent(email));
-    const data = await r.json();
-    if (!r.ok) throw new Error(data.message || 'failed');
-    const items = data.alerts || [];
-    if (items.length === 0) {
-      target.innerHTML = '<div class="afeed-empty"><div style="font-size:32px;opacity:.35;margin-bottom:10px">👁</div><div style="color:#fff;font-weight:700;font-size:14px;margin-bottom:6px">لسه ما تتابع أي فعالية</div><div style="font-size:13px">روح للرئيسية وألصق رابط أول فعالية.</div></div>';
-      return;
-    }
+    httpResult = await fetch('/api/my-alerts?email=' + encodeURIComponent(email));
+  } catch (netErr) {
+    // Network failure — no HTTP status. Show error state with retry + add.
+    target.innerHTML = renderWatchErrorBlock(tt);
+    return;
+  }
+  let data;
+  try { data = await httpResult.json(); } catch (_) { data = {}; }
+  if (!httpResult.ok) {
+    // Server returned 4xx/5xx (e.g., local dev with no DB → 500). Show
+    // error state, NOT empty state.
+    target.innerHTML = renderWatchErrorBlock(tt);
+    return;
+  }
+  const items = (data && Array.isArray(data.alerts)) ? data.alerts : [];
+  if (items.length === 0) {
+    target.innerHTML = ''
+      + '<div class="afeed-empty">'
+      +   '<div style="font-size:32px;opacity:.35;margin-bottom:10px">👁</div>'
+      +   '<div style="color:#fff;font-weight:700;font-size:14px;margin-bottom:6px">' + (tt.watchEmptyTitle || 'ما عندك مراقبات بعد') + '</div>'
+      +   '<div style="font-size:13px;margin-bottom:18px;max-width:380px;margin-left:auto;margin-right:auto">' + (tt.watchEmptyBody || 'أضف حدث من الرئيسية، وبعدها بتظهر مراقباتك هنا.') + '</div>'
+      +   '<button class="gbtn" style="padding:12px 18px;font-size:14px;border-radius:10px;max-width:260px" onclick="goHomeAndAddEvent()">' + (tt.emptyCtaAdd || 'أضف حدث') + '</button>'
+      + '</div>';
+    return;
+  }
+  try {
     // Email is NOT inlined into onclick (would force quote-escaping inside the
     // outer SSR template literal — that path produces broken JS, exactly the
     // failure mode we just removed). The handler reads the saved email from
@@ -1879,8 +2202,24 @@ async function renderUserAlertsList(email, targetId, lang) {
         + '</div>';
     }).join('') + '</div>';
   } catch (e) {
-    target.innerHTML = '<div style="color:#f87171;font-size:13px;text-align:center;padding:14px">تعذّر التحميل — جرّب مرة ثانية</div>';
+    target.innerHTML = renderWatchErrorBlock(tt);
   }
+}
+
+// Shared error-state block for the Watching tab. Distinguishes from "empty"
+// (handled separately above) by showing two CTAs: retry the lookup, or add
+// a new event from Home. Soft amber, not scary red.
+function renderWatchErrorBlock(tt) {
+  return ''
+    + '<div class="afeed-empty" style="padding:32px 16px">'
+    +   '<div style="font-size:32px;opacity:.5;margin-bottom:10px">⚠️</div>'
+    +   '<div style="color:#fff;font-weight:700;font-size:14px;margin-bottom:6px">' + (tt.watchErrorTitle || 'ما قدرنا نحمّل مراقباتك') + '</div>'
+    +   '<div style="font-size:13px;margin-bottom:18px;max-width:380px;margin-left:auto;margin-right:auto">' + (tt.watchErrorBody || 'تأكد من الإيميل أو جرّب مرة ثانية.') + '</div>'
+    +   '<div style="display:flex;flex-direction:column;gap:8px;max-width:280px;margin:0 auto">'
+    +     '<button class="gbtn" style="padding:12px 16px;font-size:14px;border-radius:10px;width:100%" onclick="watchLookup()">' + (tt.watchErrorRetry || 'جرّب مرة ثانية') + '</button>'
+    +     '<button class="obtn" style="padding:11px 16px;font-size:13.5px;border-radius:10px;width:100%" onclick="goHomeAndAddEvent()">' + (tt.emptyCtaAdd || 'أضف حدث جديد') + '</button>'
+    +   '</div>'
+    + '</div>';
 }
 
 async function watchLookup() {
@@ -1961,7 +2300,14 @@ async function loadAlertsFeed() {
       .filter(f => f.type === 'status_change' || f.type === 'alert_sent' || f.type === 'watcher_added' || f.type === 'availability_detected' || f.type === 'demand_spike')
       .slice(0, 30);
     if (items.length === 0) {
-      target.innerHTML = '<div class="afeed-empty"><div style="font-size:36px;opacity:.35;margin-bottom:10px">🔔</div><div style="color:#fff;font-weight:700;font-size:15px;margin-bottom:6px">السوق هادي حالياً</div><div>لما تصير حركة، تظهر هنا فورًا.</div></div>';
+      const tt = T[lang] || T.ar;
+      target.innerHTML = ''
+        + '<div class="afeed-empty">'
+        +   '<div style="font-size:36px;opacity:.35;margin-bottom:10px">🔔</div>'
+        +   '<div style="color:#fff;font-weight:700;font-size:15px;margin-bottom:6px">' + (tt.alertsEmptyTitle || 'ما فيه تنبيهات حتى الآن') + '</div>'
+        +   '<div style="margin-bottom:18px;max-width:380px;margin-left:auto;margin-right:auto">' + (tt.alertsEmptyBody || 'إذا رجعت مقاعد أو ظهرت فرصة على حدث تتابعه، بنعرض التنبيه هنا.') + '</div>'
+        +   '<button class="gbtn" style="padding:12px 18px;font-size:14px;border-radius:10px;max-width:260px" onclick="goHomeAndAddEvent()">' + (tt.emptyCtaAdd || 'أضف حدث للمتابعة') + '</button>'
+        + '</div>';
       return;
     }
     target.innerHTML = items.map(f => {
@@ -2285,6 +2631,44 @@ app.post('/api/unsubscribe', async (req: Request, res: Response) => {
       );
     }
     res.json({ success: true, removed });
+  } catch (e: any) {
+    res.status(500).json({ error: 'server_error', message: e.message });
+  }
+});
+
+// Queue Mode submission — user is stuck in someone else's waiting room and
+// wants us to watch for a SECOND opportunity on the same event. We do NOT
+// claim to jump the queue, buy on their behalf, or guarantee tickets — the
+// customer-facing copy makes this explicit. We just log the request so we
+// can surface a related opportunity if/when one appears.
+app.post('/api/queue-watch', async (req: Request, res: Response) => {
+  try {
+    if (!rateLimit('qw:' + getIP(req), 5, 60_000)) {
+      return res.status(429).json({ error: 'rate_limit', message: 'Too many requests' });
+    }
+    const { email, eventName, source, queuePosition, queueUrl } = req.body || {};
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ error: 'invalid_email' });
+    }
+    // Per-email second-tier limit (same pattern as subscribe/unsubscribe).
+    if (!rateLimit('qw-email:' + hashEmail(email), 5, 60_000)) {
+      console.warn('[abuse] /api/queue-watch per-email rate hit:', getIP(req), hashEmail(email));
+      return res.status(429).json({ error: 'rate_limit', message: 'Too many requests for this email' });
+    }
+    if (typeof eventName !== 'string' || eventName.trim().length < 2 || eventName.length > 200) {
+      return res.status(400).json({ error: 'invalid_event_name' });
+    }
+    const src = typeof source === 'string' ? source.trim().slice(0, 40) : null;
+    const pos = typeof queuePosition === 'string' && queuePosition.trim() ? queuePosition.trim().slice(0, 40) : null;
+    const qUrl = typeof queueUrl === 'string' && queueUrl.trim()
+      ? (isValidUrl(queueUrl) ? queueUrl.trim() : null)
+      : null;
+    await pool.query(
+      `INSERT INTO queue_watch (email, event_name, source, queue_position, queue_url)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [email, eventName.trim(), src, pos, qUrl]
+    );
+    res.json({ success: true });
   } catch (e: any) {
     res.status(500).json({ error: 'server_error', message: e.message });
   }
