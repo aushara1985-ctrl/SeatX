@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { pool } from './db';
-import { sendAlert } from './notify';
+import { sendAlert, sendAlertWithAgentMessage } from './notify';
 import { updateDemand } from './demand';
 import { sanitizeMetadata } from './metadata';
 import { logActivity } from './feed';
@@ -11,6 +11,25 @@ import { computeConfidence } from './confidence';
 import { recordSignalOutcome } from './learning';
 import { recordSuccess, recordError } from './reliability';
 import { Event, SignalResult, SourceInfo, SourceParser } from './types';
+import {
+  analyze_event_change,
+  type EventStateSnapshot,
+  type OpportunityResult,
+} from './utils/opportunity-analyzer';
+import {
+  make_alert_decision,
+  type AlertDecision,
+} from './utils/alert-decision';
+import {
+  generate_alert_message,
+  type GeneratedAlertMessage,
+} from './utils/alert-message-generator';
+import {
+  log_alert_result,
+  getEventMemory,
+  getOrCreateSourceMemory,
+  updateEventMemoryState,
+} from './utils/alert-result-logger';
 
 // Per-domain throttle: track the last fetch timestamp per hostname so a
 // cycle with many events on the same domain doesn't hammer the vendor.
@@ -30,6 +49,14 @@ async function throttleByDomain(url: string): Promise<void> {
     domainLastFetch.set(host, Date.now());
   } catch {
     /* invalid URL — skip throttle; checkEvent will fail downstream cleanly */
+  }
+}
+
+function deriveDomain(url: string): string | null {
+  try {
+    return new URL(url).hostname.toLowerCase();
+  } catch {
+    return null;
   }
 }
 
@@ -154,7 +181,18 @@ export async function checkEvent(ev: Event): Promise<void> {
     // Record source success
     await recordSuccess(source.sourceName);
 
-    if (pageHash === ev.last_page_hash && signals.status === ev.status) return;
+    if (pageHash === ev.last_page_hash && signals.status === ev.status) {
+      // Lightweight memory refresh even when nothing meaningful changed, so
+      // event_memory.last_checked_at stays current and future cycles have a
+      // populated previousState. Best-effort.
+      await updateEventMemoryState({
+        event_id: ev.id,
+        source: source.sourceName,
+        last_known_status: signals.status,
+        last_known_availability: signals.status,
+      });
+      return;
+    }
 
     let finalSignals = signals;
     let finalConfidence = confidenceResult;
@@ -226,17 +264,108 @@ export async function checkEvent(ev: Event): Promise<void> {
       await logActivity(ev.id, 'status_change', transitionMsg);
     }
 
-    if (trigger) {
+    // --- Phase 2 Smart Detection Agent gate ---
+    //
+    // Runs as a SECOND, ADDITIONAL gate on top of the legacy `trigger` check.
+    // The agent can only ever tighten (veto a send), never loosen — `trigger`
+    // still owns the 30-min cooldown + confidence floor + valid-transition list.
+    // If the agent throws unexpectedly, we fall back to the legacy send loop
+    // so the protected alert flow degrades safely.
+    let agentDecision: AlertDecision | null = null;
+    let agentMessage: GeneratedAlertMessage | null = null;
+    let agentOpportunity: OpportunityResult | null = null;
+    let agentCrashed = false;
+
+    try {
+      const evMem = await getEventMemory(ev.id, source.sourceName);
+      const srcMem = await getOrCreateSourceMemory(source.sourceName, deriveDomain(ev.event_url));
+
+      const previousState: EventStateSnapshot = {
+        // Prefer event_memory; fall back to ev fields for the first cycle.
+        availability: evMem?.last_known_availability ?? ev.last_status ?? ev.status ?? null,
+        status: evMem?.last_known_status ?? ev.last_status ?? ev.status ?? null,
+        pageHash: ev.last_page_hash || null,
+      };
+      const currentState: EventStateSnapshot = {
+        availability: finalSignals.status,
+        status: finalSignals.status,
+        pageHash: pageHash,
+        hasBuyButton: Array.isArray(finalSignals.buttonSignals) && finalSignals.buttonSignals.length > 0
+          ? true
+          : null,
+      };
+
+      agentOpportunity = analyze_event_change(previousState, currentState);
+      agentDecision = make_alert_decision(evMem || {}, srcMem || {}, agentOpportunity);
+      agentMessage = generate_alert_message(
+        { title: ev.title, event_url: ev.event_url, source_name: source.sourceName },
+        agentDecision
+      );
+    } catch (e: any) {
+      console.error('[monitor] smart detection agent crashed, falling back to legacy gate:', e?.message || e);
+      agentCrashed = true;
+    }
+
+    // Decide whether to actually send. Defense-in-depth: legacy `trigger` AND
+    // agent says send_alert. Agent crash → legacy behavior only.
+    const agentSaysSend = !agentCrashed && agentDecision?.action === 'send_alert';
+    const shouldSend = trigger && (agentCrashed || agentSaysSend);
+
+    if (shouldSend) {
       const subs = await pool.query('SELECT email FROM subscriptions WHERE event_id=$1', [ev.id]);
       for (const sub of subs.rows) {
-        await sendAlert({
-          eventId: ev.id,
-          eventTitle: ev.title,
-          status: finalSignals.status,
-          detectedSignals: finalSignals.positiveSignals,
-          url: ev.event_url,
-          recipientEmail: sub.email,
-        });
+        try {
+          if (agentMessage) {
+            await sendAlertWithAgentMessage(
+              {
+                eventId: ev.id,
+                eventTitle: ev.title,
+                status: finalSignals.status,
+                detectedSignals: finalSignals.positiveSignals,
+                url: ev.event_url,
+                recipientEmail: sub.email,
+              },
+              agentMessage
+            );
+          } else {
+            await sendAlert({
+              eventId: ev.id,
+              eventTitle: ev.title,
+              status: finalSignals.status,
+              detectedSignals: finalSignals.positiveSignals,
+              url: ev.event_url,
+              recipientEmail: sub.email,
+            });
+          }
+          if (agentDecision) {
+            await log_alert_result(
+              {
+                event_id: ev.id,
+                user_email: sub.email,
+                source: source.sourceName,
+                source_domain: deriveDomain(ev.event_url),
+                channel: 'push+email',
+                decision: agentDecision,
+              },
+              'sent'
+            ).catch(() => { /* logger crash must not break send loop */ });
+          }
+        } catch (e: any) {
+          console.error('[monitor] sendAlert failed for', sub.email, e?.message || e);
+          if (agentDecision) {
+            await log_alert_result(
+              {
+                event_id: ev.id,
+                user_email: sub.email,
+                source: source.sourceName,
+                source_domain: deriveDomain(ev.event_url),
+                channel: 'push+email',
+                decision: agentDecision,
+              },
+              'failed'
+            ).catch(() => {});
+          }
+        }
       }
       await logActivity(
         ev.id,
@@ -252,7 +381,46 @@ export async function checkEvent(ev: Event): Promise<void> {
         finalConfidence.score,
         true
       );
+    } else if (agentDecision && !agentCrashed) {
+      // Agent ran and produced a non-send decision (or legacy gate vetoed
+      // an agent-approved send). Persist the decision for audit. We skip
+      // logging pure `ignore` decisions to avoid filling alert_events with
+      // "no change" rows every cycle.
+      const isLegacyVeto = trigger === false && agentDecision.action === 'send_alert';
+      if (agentDecision.action === 'manual_review') {
+        await log_alert_result(
+          {
+            event_id: ev.id,
+            source: source.sourceName,
+            source_domain: deriveDomain(ev.event_url),
+            decision: agentDecision,
+          },
+          'manual_review'
+        ).catch(() => {});
+      } else if (agentDecision.action === 'hold' || isLegacyVeto) {
+        await log_alert_result(
+          {
+            event_id: ev.id,
+            source: source.sourceName,
+            source_domain: deriveDomain(ev.event_url),
+            decision: isLegacyVeto
+              ? { ...agentDecision, reason: 'legacy_gate_vetoed_' + agentDecision.reason }
+              : agentDecision,
+          },
+          'skipped'
+        ).catch(() => {});
+      }
+      // `ignore` is intentionally not logged.
     }
+
+    // Always update event_memory after a real check (status changed branch).
+    // The early-return branch handles the no-change case separately above.
+    await updateEventMemoryState({
+      event_id: ev.id,
+      source: source.sourceName,
+      last_known_status: finalSignals.status,
+      last_known_availability: finalSignals.status,
+    });
 
     await updateDemand(ev.id);
 

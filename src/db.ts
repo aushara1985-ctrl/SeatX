@@ -121,6 +121,67 @@ export async function setupDB(): Promise<void> {
     );
     CREATE INDEX IF NOT EXISTS idx_qw_email ON queue_watch(email);
     CREATE INDEX IF NOT EXISTS idx_qw_created ON queue_watch(created_at DESC);
+
+    -- Phase 2 Smart Detection Agent — Context Layer (rule-based, no AI).
+    -- Persists per-event memory so the detection agent can decide whether a
+    -- detected change is meaningful enough to alert users on. No prediction,
+    -- no personalization, no queue bypass — see CLAUDE.md product rules.
+    CREATE TABLE IF NOT EXISTS event_memory (
+      id SERIAL PRIMARY KEY,
+      event_id INTEGER REFERENCES events(id) ON DELETE CASCADE,
+      source TEXT,
+      last_known_status TEXT,
+      last_known_availability TEXT,
+      last_meaningful_change_at TIMESTAMPTZ,
+      last_checked_at TIMESTAMPTZ,
+      false_positive_count INTEGER DEFAULT 0,
+      alert_count INTEGER DEFAULT 0,
+      notes_json JSONB DEFAULT '{}'::jsonb,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(event_id, source)
+    );
+    CREATE INDEX IF NOT EXISTS idx_em_event ON event_memory(event_id);
+    CREATE INDEX IF NOT EXISTS idx_em_source ON event_memory(source);
+
+    -- Per-source reliability memory. Mirrors source_stats at a higher
+    -- semantic level used by the detection agent's decision step.
+    CREATE TABLE IF NOT EXISTS source_memory (
+      id SERIAL PRIMARY KEY,
+      source TEXT NOT NULL UNIQUE,
+      domain TEXT,
+      reliability_score INTEGER DEFAULT 80,
+      successful_signals INTEGER DEFAULT 0,
+      false_signals INTEGER DEFAULT 0,
+      last_false_positive_at TIMESTAMPTZ,
+      requires_confirmation BOOLEAN DEFAULT FALSE,
+      min_confidence_to_alert NUMERIC(3,2) DEFAULT 0.70,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_sm_domain ON source_memory(domain);
+
+    -- Every alert decision made by the agent — sent or not. Allows audit and
+    -- false-positive learning without faking activity. Free INTEGER columns
+    -- (no FK) on watch_request_id / queue_watch_id so partial logs never
+    -- crash the agent if the referenced row is gone.
+    CREATE TABLE IF NOT EXISTS alert_events (
+      id SERIAL PRIMARY KEY,
+      event_id INTEGER REFERENCES events(id) ON DELETE CASCADE,
+      user_email TEXT,
+      watch_request_id INTEGER,
+      queue_watch_id INTEGER,
+      decision TEXT NOT NULL,
+      opportunity_type TEXT,
+      confidence NUMERIC(3,2),
+      reason TEXT,
+      channel TEXT,
+      outcome TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_ae_event ON alert_events(event_id);
+    CREATE INDEX IF NOT EXISTS idx_ae_email ON alert_events(user_email);
+    CREATE INDEX IF NOT EXISTS idx_ae_created ON alert_events(created_at DESC);
   `);
 
   const migrations = [
