@@ -8,6 +8,16 @@ import { getPublicConfig } from './push';
 const app = express();
 app.use(express.json({ limit: '64kb' }));
 
+// FanX by SeatX — World Cup 2026 decision radar. Strictly env-gated. When
+// FANX_ENABLED is not 'true', the router is not mounted and the module tree
+// is not loaded — zero effect on SeatX. All FanX routes live under /fanx/*.
+if (process.env.FANX_ENABLED === 'true') {
+  // Lazy require so FanX code never executes when the flag is off.
+  const { createFanxRouter } = require('./fanx/routes');
+  app.use('/fanx', createFanxRouter());
+  console.log('[startup] FanX enabled — routes mounted at /fanx');
+}
+
 // =============================================================================
 // VALIDATION HELPERS
 // =============================================================================

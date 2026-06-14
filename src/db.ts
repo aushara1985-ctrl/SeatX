@@ -182,6 +182,110 @@ export async function setupDB(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_ae_event ON alert_events(event_id);
     CREATE INDEX IF NOT EXISTS idx_ae_email ON alert_events(user_email);
     CREATE INDEX IF NOT EXISTS idx_ae_created ON alert_events(created_at DESC);
+
+    -- FanX by SeatX — World Cup 2026 decision radar. Strict isolation:
+    -- every table prefixed fanx_, no FK to existing SeatX tables, no ALTER
+    -- on existing tables. Disabled at runtime unless FANX_ENABLED=true.
+    CREATE TABLE IF NOT EXISTS fanx_users (
+      id SERIAL PRIMARY KEY,
+      email TEXT,
+      whatsapp TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_fanx_users_email ON fanx_users(email);
+
+    CREATE TABLE IF NOT EXISTS fanx_radars (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER,
+      city TEXT,
+      team TEXT,
+      match_id TEXT,
+      budget_level TEXT,
+      priority TEXT,
+      has_ticket TEXT,
+      has_stay TEXT,
+      stay_area TEXT,
+      public_slug TEXT UNIQUE,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_fanx_radars_user ON fanx_radars(user_id);
+    CREATE INDEX IF NOT EXISTS idx_fanx_radars_slug ON fanx_radars(public_slug);
+
+    CREATE TABLE IF NOT EXISTS fanx_opportunities (
+      id SERIAL PRIMARY KEY,
+      type TEXT NOT NULL,
+      city TEXT,
+      stadium TEXT,
+      match_id TEXT,
+      team TEXT,
+      title TEXT,
+      description TEXT,
+      price_label TEXT,
+      distance_label TEXT,
+      source_url TEXT,
+      source_label TEXT,
+      urgency TEXT,
+      risk_level TEXT,
+      confidence NUMERIC(3,2) DEFAULT 0.70,
+      is_active BOOLEAN DEFAULT TRUE,
+      expires_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_fanx_opp_city_type_active
+      ON fanx_opportunities(city, type, is_active);
+    CREATE INDEX IF NOT EXISTS idx_fanx_opp_match ON fanx_opportunities(match_id);
+
+    CREATE TABLE IF NOT EXISTS fanx_city_zones (
+      id SERIAL PRIMARY KEY,
+      city TEXT NOT NULL,
+      stadium TEXT,
+      zone_name TEXT NOT NULL,
+      distance_label TEXT,
+      transport_label TEXT,
+      price_level TEXT,
+      family_friendly BOOLEAN DEFAULT FALSE,
+      risk_level TEXT,
+      notes TEXT,
+      UNIQUE(city, stadium, zone_name)
+    );
+    CREATE INDEX IF NOT EXISTS idx_fanx_zones_city ON fanx_city_zones(city, stadium);
+
+    CREATE TABLE IF NOT EXISTS fanx_agent_decisions (
+      id SERIAL PRIMARY KEY,
+      radar_id INTEGER,
+      opportunity_id INTEGER,
+      decision_type TEXT,
+      best_move TEXT,
+      reason TEXT,
+      score_json JSONB DEFAULT '{}'::jsonb,
+      recommended_action TEXT,
+      confidence NUMERIC(3,2),
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_fanx_dec_radar ON fanx_agent_decisions(radar_id);
+
+    CREATE TABLE IF NOT EXISTS fanx_agent_events (
+      id SERIAL PRIMARY KEY,
+      radar_id INTEGER,
+      event_type TEXT,
+      payload_json JSONB DEFAULT '{}'::jsonb,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_fanx_evt_radar ON fanx_agent_events(radar_id);
+
+    CREATE TABLE IF NOT EXISTS fanx_alert_preferences (
+      user_id INTEGER PRIMARY KEY,
+      email_enabled BOOLEAN DEFAULT TRUE,
+      whatsapp_enabled BOOLEAN DEFAULT FALSE,
+      push_enabled BOOLEAN DEFAULT FALSE,
+      ticket_alerts BOOLEAN DEFAULT TRUE,
+      stay_alerts BOOLEAN DEFAULT FALSE,
+      transport_alerts BOOLEAN DEFAULT FALSE,
+      fan_zone_alerts BOOLEAN DEFAULT FALSE,
+      alternative_match_alerts BOOLEAN DEFAULT FALSE,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
   `);
 
   const migrations = [
