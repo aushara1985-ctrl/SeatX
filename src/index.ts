@@ -31,6 +31,22 @@ function isValidUrl(u: unknown): u is string {
   }
 }
 
+// Normalize a user-pasted link. Prepends https:// when the protocol is
+// missing (real users paste "webook.com/..." all the time) and returns the
+// canonical href, or null if it still isn't a valid http(s) URL. This is the
+// server-side half of the fix for the false "invalid link" rejection.
+function normalizeUrl(u: unknown): string | null {
+  if (typeof u !== 'string') return null;
+  let s = u.trim();
+  if (!s || s.length > 2000) return null;
+  if (!/^https?:\/\//i.test(s)) s = 'https://' + s;
+  try {
+    const p = new URL(s);
+    if (p.protocol === 'http:' || p.protocol === 'https:') return p.href;
+  } catch { /* fall through */ }
+  return null;
+}
+
 function isValidTitle(t: unknown): t is string {
   if (typeof t !== 'string') return false;
   const trimmed = t.trim();
@@ -232,6 +248,8 @@ function renderTrendingCard(e: any): string {
 function getHTML(events: any[], feed: any[], alerts24h: number = 0): string {
   const ej = JSON.stringify(events).replace(/</g, '\\u003c');
   const fj = JSON.stringify(feed).replace(/</g, '\\u003c');
+  // FanX secondary entry only renders when FanX is live (avoids a dead link).
+  const fanxOn = process.env.FANX_ENABLED === 'true';
 
   return `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -892,6 +910,17 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
     </div>
   </div>
 </div>
+
+${fanxOn ? `
+<!-- ════ FanX secondary entry (home tab) — additive, links to /fanx ═══════ -->
+<div class="section active-tab" data-tab="home">
+  <a href="/fanx" style="display:block;text-decoration:none;background:linear-gradient(135deg,rgba(163,230,53,.08),rgba(163,230,53,.02));border:1px solid rgba(163,230,53,.22);border-radius:16px;padding:20px 18px;max-width:560px;margin:0 auto">
+    <div style="font-family:var(--mono);font-size:10px;color:var(--lime);text-transform:uppercase;letter-spacing:.12em;margin-bottom:8px">🎫 FanX · رادار يوم الفعالية</div>
+    <div style="font-size:18px;font-weight:800;color:#fff;margin-bottom:6px">رايح فعالية كبيرة؟</div>
+    <div style="font-size:14px;color:var(--muted2);line-height:1.7;margin-bottom:14px">جرّب FanX — رادار يوم الفعالية للزحمة، التنبيهات، التنقل، والبدائل.</div>
+    <span style="display:inline-flex;align-items:center;gap:6px;color:var(--lime);font-weight:700;font-size:14px">شوف FanX ←</span>
+  </a>
+</div>` : ''}
 
 <!-- ════ ACCOUNT TAB — settings only (no email lookup; see Watching tab) ═══════ -->
 <div class="section" data-tab="account">
@@ -1587,9 +1616,12 @@ setTimeout(() => { showToast(); setInterval(showToast, 9000 + Math.random() * 20
 async function addEvent() {
   const t = T[lang];
   const title = document.getElementById('ev-t').value.trim();
-  const url = document.getElementById('ev-u').value.trim();
+  let url = document.getElementById('ev-u').value.trim();
   if (!title || !url) { alert(t.fillAll); return; }
-  if (!/^https?:\\/\\//i.test(url)) { alert(t.invalidUrl); return; }
+  // Tolerate links pasted without a protocol (e.g. "webook.com/..."). Real
+  // users copy links this way — rejecting them is the bug Ahmad hit.
+  if (!/^https?:\\/\\//i.test(url)) url = 'https://' + url;
+  if (url.indexOf('.') === -1) { alert(t.invalidUrl); return; }
   const btn = document.getElementById('afb');
   const orig = btn.textContent;
   btn.textContent = t.adding;
@@ -1610,9 +1642,11 @@ async function addEvent() {
 
 async function quickAdd() {
   const t = T[lang];
-  const url = document.getElementById('qh-url').value.trim();
+  let url = document.getElementById('qh-url').value.trim();
   if (!url) { document.getElementById('qh-url').focus(); return; }
-  if (!/^https?:\\/\\//i.test(url)) { alert(t.invalidUrl); return; }
+  // Tolerate links without a protocol (same fix as addEvent).
+  if (!/^https?:\\/\\//i.test(url)) url = 'https://' + url;
+  if (url.indexOf('.') === -1) { alert(t.invalidUrl); return; }
   const btn = document.getElementById('qh-btn');
   const orig = btn.textContent;
   btn.textContent = t.adding;
@@ -2486,14 +2520,17 @@ app.post('/api/events', async (req: Request, res: Response) => {
     if (!isValidTitle(title)) {
       return res.status(400).json({ error: 'invalid_title', message: 'Title must be 1-200 characters' });
     }
-    if (!isValidUrl(eventUrl)) {
-      return res.status(400).json({ error: 'invalid_url', message: 'URL must be valid http(s)' });
+    // Normalize first — prepend https:// when missing so a pasted
+    // "webook.com/..." is accepted instead of falsely rejected.
+    const normUrl = normalizeUrl(eventUrl);
+    if (!normUrl) {
+      return res.status(400).json({ error: 'invalid_url', message: 'أدخل رابطًا صحيحًا للحدث' });
     }
     // Domain allowlist — only accept events from known ticket vendors.
     // Anything else is rejected here (kills fake-event spam + outbound SSRF).
-    if (!isAllowedTicketDomain(eventUrl)) {
+    if (!isAllowedTicketDomain(normUrl)) {
       let blockedHost = '';
-      try { blockedHost = new URL(eventUrl).hostname; } catch { }
+      try { blockedHost = new URL(normUrl).hostname; } catch { }
       console.warn('[abuse] /api/events disallowed domain:', getIP(req), blockedHost);
       return res.status(400).json({
         error: 'unsupported_domain',
@@ -2502,7 +2539,7 @@ app.post('/api/events', async (req: Request, res: Response) => {
     }
     const r = await pool.query(
       'INSERT INTO events (title, event_url) VALUES ($1, $2) RETURNING *',
-      [title.trim(), eventUrl.trim()]
+      [title.trim(), normUrl]
     );
     res.json(r.rows[0]);
   } catch (e: any) {
