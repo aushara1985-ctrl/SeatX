@@ -818,6 +818,26 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
   </div>
 </div>
 
+<!-- ════ ENTRY MODE 2 — no link, just the event name ════════════════════
+     User tells us the event; we find/monitor tickets and alert them. We do
+     NOT say "we search for a link" — the outcome framing is: tell us the
+     event, we bring the alert. -->
+<div class="section active-tab" id="request-event" data-tab="home">
+  <div class="add-form" style="max-width:560px">
+    <div class="form-title" id="rq-title">ما عندك رابط؟ قل لنا الحدث</div>
+    <div class="form-sub" id="rq-sub">اكتب اسم الحدث اللي تبيه، وSeatX يوصّلك تنبيه لما تتوفر تذاكره — بدون ما تدوّر بنفسك.</div>
+    <label class="form-label" id="rq-l-name">اسم الحدث</label>
+    <input class="form-input" type="text" id="rq-event" placeholder="مثال: الهلال × النصر، حفلة محمد عبده، موسم الرياض" maxlength="200"/>
+    <label class="form-label" id="rq-l-city">المدينة <span style="color:var(--muted);font-weight:400" id="rq-optional">(اختياري)</span></label>
+    <input class="form-input" type="text" id="rq-city" placeholder="الرياض، جدة، ..." maxlength="60"/>
+    <label class="form-label" id="rq-l-email">بريدك للتنبيه</label>
+    <input class="form-input" type="email" id="rq-email" placeholder="your@email.com" autocomplete="email"/>
+    <button class="gbtn" style="width:100%;padding:12px;font-size:14px;border-radius:10px" onclick="requestEvent()" id="rq-btn">🔔 نبّهني لما تتوفر التذاكر</button>
+    <div id="rq-confirm" style="display:none;margin-top:14px;padding:12px 14px;border-radius:10px;background:rgba(163,230,53,.06);border:1px solid rgba(163,230,53,.2);font-size:13px;color:#e4e4e7;line-height:1.7"></div>
+    <div class="form-note" id="rq-note">مجاني · بدون حساب · ننبّهك أول ما نلقى تذاكره</div>
+  </div>
+</div>
+
 <!-- ════ QUEUE MODE — for users stuck in someone else's waiting room ═══
      IMPORTANT: copy makes no promise of jumping the queue, buying for
      them, or guaranteeing tickets. We only watch for a SECOND opportunity
@@ -1192,6 +1212,12 @@ const T = {
     qmConfirm: "Done. Stay in the queue if you want — SeatX is now watching for a second opportunity on the same event. If another link, a new drop, a different package, or a meaningful availability change appears, we'll notify you.",
     qmDisclaimer: "SeatX doesn't bypass queues, doesn't buy on your behalf, and doesn't guarantee tickets.",
     qmNeedEvent: 'Enter the event name first',
+    // Entry mode 2 — request by name
+    rqTitle: "No link? Just tell us the event", rqSub: "Type the event you want and SeatX alerts you the moment its tickets are available — no searching on your part.",
+    rqLName: 'Event name', rqLCity: 'City', rqOptional: '(optional)', rqLEmail: 'Email for the alert',
+    rqBtn: '🔔 Alert me when tickets are available', rqNote: 'Free · No account · We alert you the moment we find tickets',
+    rqEventPh: 'e.g. Al Hilal vs Al Nassr, a concert, Riyadh Season', rqCityPh: 'Riyadh, Jeddah, ...',
+    rqNeedEvent: 'Enter the event name', rqConfirm: "Done — we saved your request for “{ev}”. The moment its tickets are available, we'll alert your email.",
     // Queue Mode segmented source button (label for "Other"; vendor names stay as-is)
     qmSegOther: 'Other',
     // Queue Mode success card
@@ -1319,6 +1345,12 @@ const T = {
     qmConfirm: 'تمام. خلّك في الكيو إذا تبغى، وSeatX بيراقب أي فرصة ثانية حول نفس الحدث. إذا ظهر رابط آخر، دفعة جديدة، باقة مختلفة، أو تغير مهم في التوفر، بننبّهك.',
     qmDisclaimer: 'SeatX لا يتجاوز الكيو، لا يشتري بدالك، ولا يضمن التذاكر.',
     qmNeedEvent: 'اكتب اسم الحدث أولًا',
+    // Entry mode 2 — request by name
+    rqTitle: 'ما عندك رابط؟ قل لنا الحدث', rqSub: 'اكتب اسم الحدث اللي تبيه، وSeatX يوصّلك تنبيه لما تتوفر تذاكره — بدون ما تدوّر بنفسك.',
+    rqLName: 'اسم الحدث', rqLCity: 'المدينة', rqOptional: '(اختياري)', rqLEmail: 'بريدك للتنبيه',
+    rqBtn: '🔔 نبّهني لما تتوفر التذاكر', rqNote: 'مجاني · بدون حساب · ننبّهك أول ما نلقى تذاكره',
+    rqEventPh: 'مثال: الهلال × النصر، حفلة محمد عبده، موسم الرياض', rqCityPh: 'الرياض، جدة، ...',
+    rqNeedEvent: 'اكتب اسم الحدث', rqConfirm: 'تمام — سجّلنا طلبك على «{ev}». أول ما تتوفر تذاكره بننبّهك على بريدك.',
     // Queue Mode segmented source button
     qmSegOther: 'غير ذلك',
     // Queue Mode success card
@@ -1429,6 +1461,14 @@ function setLang(l) {
   var qmLUrl = document.getElementById('qm-l-url');
   if (qmLUrl) qmLUrl.innerHTML = t.qmLUrl + ' <span style="color:var(--muted);font-weight:400">' + t.qmLOptional + '</span>';
   s('qm-l-email', t.qmLEmail); s('qm-btn', t.qmSubmit); s('qm-disclaimer', t.qmDisclaimer);
+  // Entry mode 2 — request by name
+  s('rq-title', t.rqTitle); s('rq-sub', t.rqSub);
+  s('rq-l-name', t.rqLName); s('rq-l-email', t.rqLEmail);
+  s('rq-btn', t.rqBtn); s('rq-note', t.rqNote); s('rq-optional', t.rqOptional);
+  sPh('rq-event', t.rqEventPh); sPh('rq-city', t.rqCityPh);
+  // rq-l-city has an inline (optional) span — set via innerHTML to keep it.
+  var rqLCity = document.getElementById('rq-l-city');
+  if (rqLCity) rqLCity.innerHTML = t.rqLCity + ' <span style="color:var(--muted);font-weight:400" id="rq-optional">' + t.rqOptional + '</span>';
   sPh('qm-event', t.qmEventPh); sPh('qm-pos', t.qmPosPh); sPh('qm-url', t.qmUrlPh);
   // Bullet list (4 items) — re-rendered as innerHTML on lang switch.
   var qmBul = document.getElementById('qm-bullets');
@@ -1800,6 +1840,42 @@ async function queueModeSubmit() {
     alert(t.error || 'حصل خطأ');
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = origLabel || (t.qmSubmit || 'ابحث عن فرصة ثانية'); }
+  }
+}
+
+// Entry mode 2 — request an event by name (no link). Posts to
+// /api/request-event, then shows a confirmation. Outcome framing only.
+async function requestEvent() {
+  const t = T[lang];
+  const email = document.getElementById('rq-email')?.value?.trim();
+  const eventName = document.getElementById('rq-event')?.value?.trim();
+  const city = document.getElementById('rq-city')?.value?.trim() || '';
+  if (!eventName || eventName.length < 2) { alert(t.rqNeedEvent || 'اكتب اسم الحدث'); return; }
+  if (!email || !email.includes('@')) { alert(t.invalidEmail); return; }
+  const btn = document.getElementById('rq-btn');
+  const orig = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = t.sending || 'جاري الإرسال...'; }
+  try {
+    const r = await fetch('/api/request-event', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, eventName: eventName, city: city || null }),
+    });
+    if (!r.ok) throw new Error('failed');
+    try { localStorage.setItem('seatx_last_email', email); } catch (_) { }
+    tryEnablePush(email);
+    // Collapse the form, show confirmation.
+    ['rq-l-name','rq-event','rq-l-city','rq-city','rq-l-email','rq-email','rq-btn','rq-note'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.style.display = 'none';
+    });
+    const conf = document.getElementById('rq-confirm');
+    if (conf) {
+      conf.textContent = (t.rqConfirm || 'تمام — سجّلنا طلبك على «{ev}». أول ما تتوفر تذاكره بننبّهك على بريدك.').replace('{ev}', eventName);
+      conf.style.display = 'block';
+    }
+  } catch (e) {
+    alert(t.error || 'حصل خطأ');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = orig || (t.rqBtn || '🔔 نبّهني لما تتوفر التذاكر'); }
   }
 }
 
@@ -2688,6 +2764,35 @@ app.post('/api/unsubscribe', async (req: Request, res: Response) => {
 // claim to jump the queue, buy on their behalf, or guarantee tickets — the
 // customer-facing copy makes this explicit. We just log the request so we
 // can surface a related opportunity if/when one appears.
+// Entry mode 2 — user has an event in mind but NO link. They give us the
+// event name + email; we find/monitor the official tickets and alert them.
+// Honest framing: we don't promise instant results, we promise an alert.
+app.post('/api/request-event', async (req: Request, res: Response) => {
+  try {
+    if (!rateLimit('req:' + getIP(req), 5, 60_000)) {
+      return res.status(429).json({ error: 'rate_limit', message: 'Too many requests' });
+    }
+    const { email, eventName, city } = req.body || {};
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ error: 'invalid_email' });
+    }
+    if (!rateLimit('req-email:' + hashEmail(email), 5, 60_000)) {
+      return res.status(429).json({ error: 'rate_limit', message: 'Too many requests for this email' });
+    }
+    if (typeof eventName !== 'string' || eventName.trim().length < 2 || eventName.length > 200) {
+      return res.status(400).json({ error: 'invalid_event_name' });
+    }
+    const cityStr = (typeof city === 'string' && city.trim()) ? city.trim().slice(0, 60) : null;
+    await pool.query(
+      `INSERT INTO event_requests (email, event_name, city, status) VALUES ($1, $2, $3, 'pending')`,
+      [email, eventName.trim(), cityStr]
+    );
+    res.json({ success: true });
+  } catch (e: any) {
+    res.status(500).json({ error: 'server_error', message: e.message });
+  }
+});
+
 app.post('/api/queue-watch', async (req: Request, res: Response) => {
   try {
     if (!rateLimit('qw:' + getIP(req), 5, 60_000)) {

@@ -122,6 +122,23 @@ export async function setupDB(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_qw_email ON queue_watch(email);
     CREATE INDEX IF NOT EXISTS idx_qw_created ON queue_watch(created_at DESC);
 
+    -- Entry mode 2: user knows the event but has NO link. They tell us the
+    -- event name; we find/monitor the official tickets and alert them. To the
+    -- user it's simply "tell us the event, we'll alert you." status flows:
+    -- pending -> matched (we attached a real event) -> notified.
+    CREATE TABLE IF NOT EXISTS event_requests (
+      id SERIAL PRIMARY KEY,
+      email TEXT NOT NULL,
+      event_name TEXT NOT NULL,
+      city TEXT,
+      status TEXT DEFAULT 'pending',
+      linked_event_id INTEGER,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_er_email ON event_requests(email);
+    CREATE INDEX IF NOT EXISTS idx_er_status ON event_requests(status);
+    CREATE INDEX IF NOT EXISTS idx_er_created ON event_requests(created_at DESC);
+
     -- Phase 2 Smart Detection Agent — Context Layer (rule-based, no AI).
     -- Persists per-event memory so the detection agent can decide whether a
     -- detected change is meaningful enough to alert users on. No prediction,
