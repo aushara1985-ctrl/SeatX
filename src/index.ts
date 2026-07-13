@@ -760,8 +760,8 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
     <h1><span id="hm">لا تفوّت التذكرة</span><em id="ha">إذا رجعت.</em></h1>
     <p class="hero-sub" id="hs">SeatX يتابع الحدث وينبهك إذا ظهرت فرصة: مقاعد رجعت، ضغط ارتفع، أو حركة جديدة على نفس الحدث.</p>
     <div class="hero-btns">
-      <button class="gbtn" id="hb1" onclick="scrollTo('add')">ابدأ المتابعة</button>
-      <button class="obtn" id="hb2" onclick="scrollTo('queue-mode')">أنا داخل كيو</button>
+      <button class="gbtn" id="hb1" onclick="goToSection('add')">ابدأ المتابعة</button>
+      <button class="obtn" id="hb2" onclick="goToSection('queue-mode')">أنا داخل كيو</button>
     </div>
     <div class="stats-row">
       <div class="stat-block">
@@ -1379,7 +1379,13 @@ const T = {
 let lang = 'en';
 let pendingEventId = null;
 
-function scrollTo(id) { document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' }); }
+// Deliberately NOT named after the native scroll method: an inline handler
+// runs inside with(element), and every element already carries the DOM
+// scroll method (x,y signature). A same-named global is shadowed by the
+// element's method, so the id string is read as an x-coordinate -> NaN ->
+// no scroll. goToSection sidesteps that, and also stops a global from
+// shadowing the real window scroll method used elsewhere.
+function goToSection(id) { document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' }); }
 function s(id, v) { const e = document.getElementById(id); if (e) e.textContent = v; }
 function sPh(id, v) { const e = document.getElementById(id); if (e) e.placeholder = v; }
 
