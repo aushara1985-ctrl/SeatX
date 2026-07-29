@@ -156,6 +156,7 @@ export async function setupDB(): Promise<void> {
       first_watch_at TIMESTAMPTZ,           -- referral qualifies on first real watch
       referral_days_earned INTEGER DEFAULT 0,
       referral_clicks INTEGER DEFAULT 0,    -- top of the ambassador funnel (link taps)
+      is_partner BOOLEAN DEFAULT false,     -- affiliate program is invite-only; founder picks partners
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS idx_acc_refcode ON accounts(referral_code);
@@ -374,6 +375,8 @@ export async function setupDB(): Promise<void> {
     `CREATE UNIQUE INDEX IF NOT EXISTS subscriptions_event_email_uniq ON subscriptions(event_id, email)`,
     // Ambassador-funnel click counter on the existing prod accounts table.
     `ALTER TABLE accounts ADD COLUMN IF NOT EXISTS referral_clicks INTEGER DEFAULT 0`,
+    // Invite-only affiliate flag on the existing prod accounts table.
+    `ALTER TABLE accounts ADD COLUMN IF NOT EXISTS is_partner BOOLEAN DEFAULT false`,
     // One-time cleanup of QA/greploop test rows. Pattern-matched to test data
     // only — cannot touch a real signup or a real allowlisted event. Idempotent
     // (matches nothing once cleaned). The prod DB is internal-only, so this runs

@@ -2577,11 +2577,10 @@ async function loadAccountCard(email) {
       + '<div style="display:flex;gap:8px;margin-top:8px">'
       +   '<a class="pc-btn" style="flex:1;text-decoration:none;text-align:center;padding:11px" href="https://wa.me/?text=' + encodeURIComponent('جرّب SeatX — ما تفوّت تذكرة إذا رجعت: ' + acc.referral_url) + '" target="_blank" rel="noopener">مشاركة واتساب</a>'
       + '</div>'
-      + '<div style="margin-top:10px;font-size:12px;color:var(--muted2);font-family:var(--mono)">دعوات مؤهّلة: ' + qualified + ' · أيام كسبتها: ' + earned + '</div>'
-      + (acc.partner_url ? '<a href="' + escapeHtmlClient(acc.partner_url) + '" target="_blank" rel="noopener" style="display:block;margin-top:14px;padding:13px 14px;border-radius:12px;text-decoration:none;background:rgba(163,230,53,.07);border:1px solid rgba(163,230,53,.28)">'
-          + '<div style="color:var(--lime);font-weight:800;font-size:14px">💰 تبي تكسب فلوس؟ صِر شريك SeatX</div>'
-          + '<div style="color:var(--muted2);font-size:12.5px;margin-top:3px">10% من كل اشتراك عن طريقك — يستمر طول ما هو مشترك. افتح محفظة الشريك ←</div>'
-          + '</a>' : '');
+      + '<div style="margin-top:10px;font-size:12px;color:var(--muted2);font-family:var(--mono)">دعوات مؤهّلة: ' + qualified + ' · أيام كسبتها: ' + earned + '</div>';
+    // NOTE: no self-serve "become a partner" CTA here. The affiliate program is
+    // invite-only — the founder picks partners from /admin and hands them their
+    // /partner link directly.
   }
 }
 
@@ -3065,10 +3064,11 @@ function accountView(row: any): Record<string, unknown> {
   };
 }
 
-// PARTNER (affiliate) program economics. A partner earns a % of the subscription
-// value of everyone who becomes a PAYING subscriber via their link, recurring
-// while that subscriber stays. Distinct from the customer +1-day referral perk.
-const PARTNER_RATE = parseFloat(process.env.PARTNER_RATE || '0.10');  // 10%
+// PARTNER (affiliate) program economics. A partner earns a ONE-TIME commission
+// (% of the subscription value) for each new PAYING subscriber they bring — paid
+// once per subscriber, not recurring. Invite-only: only accounts flagged
+// is_partner see the wallet. Distinct from the customer +1-day referral perk.
+const PARTNER_RATE = parseFloat(process.env.PARTNER_RATE || '0.10');  // 10% one-time
 const PLAN_PRICE_USD: Record<string, number> = { pro: 9, lifetime: 199 }; // founder-era $; refine when payments store the real charge
 
 // Mask an email for a semi-public (shareable) page: keep first 2 chars + domain.
@@ -3097,24 +3097,21 @@ async function partnerWallet(code: string): Promise<any | null> {
   const referred = (await pool.query(
     `SELECT email, plan, created_at FROM accounts WHERE referred_by=$1 ORDER BY id DESC LIMIT 30`, [code]
   ).catch(() => ({ rows: [] as any[] }))).rows;
-  let proSubs = 0, lifeSubs = 0;
+  let paidSubs = 0;
   const ledger = referred.map((r: any) => {
     const paid = r.plan === 'pro' || r.plan === 'lifetime';
-    if (r.plan === 'pro') proSubs++;
-    if (r.plan === 'lifetime') lifeSubs++;
+    if (paid) paidSubs++;
     const price = PLAN_PRICE_USD[r.plan] || 0;
-    const commission = +(price * PARTNER_RATE).toFixed(2);
+    const commission = +(price * PARTNER_RATE).toFixed(2);   // one-time
     return { email: maskEmail(r.email), plan: r.plan, paid, commission };
   });
-  const activePaid = proSubs + lifeSubs;
-  const monthlyRecurring = +(proSubs * PLAN_PRICE_USD.pro * PARTNER_RATE).toFixed(2);
-  const oneTime = +(lifeSubs * PLAN_PRICE_USD.lifetime * PARTNER_RATE).toFixed(2);
-  const totalEarned = +(monthlyRecurring + oneTime).toFixed(2);
-  const convSignupPaid = signups > 0 ? Math.round((activePaid / signups) * 100) : 0;
+  // One-time commission per paying subscriber (not recurring).
+  const totalEarned = +ledger.reduce((s: number, r: any) => s + (r.paid ? r.commission : 0), 0).toFixed(2);
+  const convSignupPaid = signups > 0 ? Math.round((paidSubs / signups) * 100) : 0;
   return {
-    code, email: owner.email, clicks, signups, active_paid: activePaid,
-    pro_subs: proSubs, life_subs: lifeSubs,
-    monthly_recurring: monthlyRecurring, one_time: oneTime, total_earned: totalEarned,
+    code, email: owner.email, is_partner: !!owner.is_partner,
+    clicks, signups, active_paid: paidSubs,
+    total_earned: totalEarned,
     conv_signup_paid: convSignupPaid, rate_pct: Math.round(PARTNER_RATE * 100),
     ledger,
     referral_url: (process.env.PUBLIC_BASE_URL || 'https://seatx.space') + '/?ref=' + code,
@@ -3180,6 +3177,16 @@ function renderPartnerPage(w: any | null, code: string): string {
         <div class="linkbox"><a class="btn" href="/">افتح SeatX</a></div>
       </div>`);
   }
+  // Invite-only: the wallet is visible only to accounts the founder picked.
+  if (!w.is_partner) {
+    return pageShell('برنامج الشركاء — SeatX', brand + `
+      <div class="hcard">
+        <div class="eyebrow">برنامج شركاء SeatX 💚</div>
+        <p style="margin:8px 0 0;font-size:14.5px;line-height:1.8">هذا البرنامج <b style="color:var(--lime)">بالدعوة فقط</b> — نختار عدد محدود من الشركاء الأوائل يبنون SeatX معنا. تكسب عمولة عن كل مشترك جديد تجيبه.</p>
+        <p class="mut" style="margin:10px 0 0;font-size:13.5px">مهتم؟ راسلنا وإذا انضممت بتوصلك لوحتك الخاصة تتابع فيها إحالاتك وأرباحك لحظة بلحظة.</p>
+        <div class="linkbox"><a class="btn" href="/">افتح SeatX</a></div>
+      </div>`);
+  }
   const money = (n: number) => '$' + Number(n || 0).toFixed(2);
   const ledgerRows = (w.ledger || []).map((r: any) => {
     const status = r.plan === 'pro' ? '<span class="pill pro">مشترك Pro</span>'
@@ -3192,11 +3199,11 @@ function renderPartnerPage(w: any | null, code: string): string {
     <div class="hcard">
       <div class="eyebrow">محفظتك — أرباحك من برنامج الشركاء</div>
       <div class="big">${money(w.total_earned)}<small>إجمالي</small></div>
-      <p class="mut" style="margin:10px 0 0;font-size:13.5px">تكسب <b style="color:var(--lime)">${w.rate_pct}%</b> من قيمة كل اشتراك يجي عن طريقك — <b style="color:var(--lime)">ويستمر طول ما هو مشترك</b>. 💚</p>
+      <p class="mut" style="margin:10px 0 0;font-size:13.5px">تكسب <b style="color:var(--lime)">${w.rate_pct}% عمولة لمرة واحدة</b> عن كل مشترك جديد يجي عن طريقك. 💚</p>
     </div>
     <div class="grid">
       <div class="stat"><div class="n">${w.active_paid}</div><div class="l">مشتركين دافعين</div></div>
-      <div class="stat"><div class="n">${money(w.monthly_recurring)}</div><div class="l">دخل شهري متكرر</div></div>
+      <div class="stat"><div class="n">${w.signups}</div><div class="l">سجّلوا عن طريقك</div></div>
       <div class="stat"><div class="n">${w.conv_signup_paid}%</div><div class="l">تحويل تسجيل → اشتراك</div></div>
     </div>
 
@@ -3221,8 +3228,8 @@ function renderPartnerPage(w: any | null, code: string): string {
 
     <div class="note">
       <b>برنامج شركاء SeatX 🚀</b><br>
-      انزل محتوى مرة واحدة، ويتحوّل إلى أصل يجيب لك دخل مع الوقت. إذا أحد اشترك عن طريق رابطك تاخذ <b style="color:var(--lime)">${w.rate_pct}% من قيمة اشتراكه</b>، وطالما هو مستمر — دخلك مستمر. مو مطلوب منك تكون مندوب مبيعات، ولا تضغط على أحد. إذا المنتج عجبك شاركه بطريقتك، والباقي علينا.<br><br>
-      إحنا ما ندوّر مسوّقين — ندوّر <b>أوائل الشركاء</b> اللي يبنون SeatX معنا من البداية. ابدأ اليوم، ويمكن بعد سنة تشكر نفسك إنك بدأت بدري. 💚
+      إذا أحد اشترك عن طريق رابطك، تاخذ <b style="color:var(--lime)">${w.rate_pct}% من قيمة اشتراكه — عمولة ترحيب لمرة واحدة عن كل مشترك جديد</b>. مو مطلوب منك تكون مندوب مبيعات، ولا تضغط على أحد. إذا المنتج عجبك شاركه بطريقتك، والباقي علينا.<br><br>
+      إحنا ما ندوّر مسوّقين — ندوّر <b>أوائل الشركاء</b> اللي يبنون SeatX معنا من البداية. برنامج بالدعوة، وإنت منهم. 💚
     </div>
     <script>
       (function(){
@@ -3251,7 +3258,8 @@ async function renderAdminPage(token: string): Promise<string> {
   const refSignups = (await one('SELECT COUNT(*)::int c FROM referral_events'))[0]?.c || 0;
   const refQual = (await one(`SELECT COUNT(*)::int c FROM referral_events WHERE status IN ('qualified','rewarded')`))[0]?.c || 0;
   const daysAwarded = (await one('SELECT COALESCE(SUM(referral_days_earned),0)::int c FROM accounts'))[0]?.c || 0;
-  const signups = await one('SELECT email, founder_number, plan, pro_until, referral_code, referral_clicks, referral_days_earned, created_at FROM accounts ORDER BY id DESC LIMIT 25');
+  const signups = await one('SELECT email, founder_number, plan, pro_until, referral_code, referral_clicks, referral_days_earned, is_partner, created_at FROM accounts ORDER BY id DESC LIMIT 25');
+  const partnersC = (await one('SELECT COUNT(*)::int c FROM accounts WHERE is_partner=true'))[0]?.c || 0;
   const events = await one('SELECT id, title, status, watchers_count, created_at FROM events ORDER BY id DESC LIMIT 12');
 
   const now = Date.now();
@@ -3267,10 +3275,19 @@ async function renderAdminPage(token: string): Promise<string> {
 
   const signupRows = signups.map((s: any) => {
     const du = s.pro_until ? Math.max(0, Math.ceil((new Date(s.pro_until).getTime() - now) / 86_400_000)) : 0;
-    const planPill = s.plan === 'lifetime' ? '<span class="pill life">lifetime</span>'
+    const isPaid = s.plan === 'pro' || s.plan === 'lifetime';
+    const planPill = (s.plan === 'lifetime' ? '<span class="pill life">lifetime</span>'
       : s.plan === 'pro' ? '<span class="pill pro">pro</span>'
-      : '<span class="pill">' + escapeHtml(s.plan || '—') + '</span>';
-    const partnerLink = s.referral_code ? `<a href="/partner?code=${encodeURIComponent(s.referral_code)}" target="_blank">لوحة</a>` : '—';
+      : '<span class="pill">' + escapeHtml(s.plan || '—') + '</span>')
+      + '<div style="margin-top:5px;display:flex;gap:4px;flex-wrap:wrap">'
+      + (isPaid
+          ? `<button class="pbtn plan" data-email="${escapeHtml(s.email)}" data-plan="free">↩ مجاني</button>`
+          : `<button class="pbtn plan" data-email="${escapeHtml(s.email)}" data-plan="pro">علّم Pro</button><button class="pbtn plan" data-email="${escapeHtml(s.email)}" data-plan="lifetime">Lifetime</button>`)
+      + '</div>';
+    const partnerLink = (s.referral_code && s.is_partner) ? `<a href="/partner?code=${encodeURIComponent(s.referral_code)}" target="_blank">محفظة ←</a>` : '<span class="mut">—</span>';
+    const toggle = s.is_partner
+      ? `<button class="pbtn on" data-email="${escapeHtml(s.email)}" data-to="0">شريك ✓</button>`
+      : `<button class="pbtn" data-email="${escapeHtml(s.email)}" data-to="1">اجعله شريك</button>`;
     return `<tr>
       <td>#${s.founder_number ?? '—'}</td>
       <td class="mut">${escapeHtml(s.email)}</td>
@@ -3278,9 +3295,10 @@ async function renderAdminPage(token: string): Promise<string> {
       <td>${du}ي</td>
       <td class="mut" style="font-family:var(--mono)">${escapeHtml(s.referral_code || '—')}</td>
       <td>${s.referral_clicks || 0}👆 · ${s.referral_days_earned || 0}⚡</td>
+      <td>${toggle}</td>
       <td>${partnerLink}</td>
     </tr>`;
-  }).join('') || '<tr><td colspan="7" class="mut">لا يوجد مستخدمون بعد.</td></tr>';
+  }).join('') || '<tr><td colspan="8" class="mut">لا يوجد مستخدمون بعد.</td></tr>';
 
   const eventRows = events.map((e: any) => `<tr>
       <td>${e.id}</td><td>${escapeHtml((e.title || '').slice(0, 46))}</td>
@@ -3288,20 +3306,43 @@ async function renderAdminPage(token: string): Promise<string> {
     </tr>`).join('') || '<tr><td colspan="4" class="mut">لا أحداث.</td></tr>';
 
   const inner = `<div class="brand">SEAT<span class="x">X</span><span style="color:var(--txt2);font-weight:600;font-size:14px">· الأدمن</span></div>
-    <p class="sub">لوحة تشغيل — للاطلاع فقط. الأرقام لحظية من قاعدة البيانات.</p>
+    <p class="sub">لوحة تشغيل. الأرقام لحظية من قاعدة البيانات. تقدر تختار الشركاء من الجدول تحت.</p>
     ${grid}
-    <h2>الإحالات</h2>
+    <h2>الإحالات + الشركاء</h2>
     <div class="grid" style="grid-template-columns:repeat(3,1fr)">
       ${stat(refSignups, 'تسجيلات عبر روابط')}
       ${stat(refQual, 'مؤهّلة (فعّلت متابعة)')}
-      ${stat(daysAwarded, 'أيام مُنِحت')}
+      ${stat(partnersC, 'شركاء مُختارين')}
     </div>
-    <h2>آخر التسجيلات</h2>
-    <table><thead><tr><th>#</th><th>الإيميل</th><th>الخطة</th><th>باقي</th><th>الكود</th><th>الإحالات</th><th>الشريك</th></tr></thead>
+    <h2>آخر التسجيلات — اختر شركاءك</h2>
+    <table><thead><tr><th>#</th><th>الإيميل</th><th>الخطة</th><th>باقي</th><th>الكود</th><th>الإحالات</th><th>شريك؟</th><th>المحفظة</th></tr></thead>
     <tbody>${signupRows}</tbody></table>
     <h2>آخر الأحداث</h2>
     <table><thead><tr><th>id</th><th>العنوان</th><th>الحالة</th><th>متابعون</th></tr></thead>
-    <tbody>${eventRows}</tbody></table>`;
+    <tbody>${eventRows}</tbody></table>
+    <style>
+      .pbtn{background:transparent;border:1px solid var(--border);color:var(--txt2);border-radius:9px;padding:6px 10px;font-size:12px;font-family:'Tajawal';cursor:pointer;white-space:nowrap}
+      .pbtn:hover{border-color:var(--lime);color:var(--lime)}
+      .pbtn.on{background:rgba(163,230,53,.12);border-color:rgba(163,230,53,.45);color:var(--lime);font-weight:700}
+    </style>
+    <script>
+      (function(){
+        var key = new URLSearchParams(location.search).get('key') || '';
+        function post(url, body, b){
+          b.disabled = true; var old = b.textContent; b.textContent = '...';
+          fetch(url + '?key=' + encodeURIComponent(key), {
+            method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
+          }).then(function(r){ return r.json(); }).then(function(){ location.reload(); })
+            .catch(function(){ b.disabled = false; b.textContent = old + ' — أعد'; });
+        }
+        document.querySelectorAll('.pbtn.plan').forEach(function(b){
+          b.addEventListener('click', function(){ post('/admin/plan', { email: b.getAttribute('data-email'), plan: b.getAttribute('data-plan') }, b); });
+        });
+        document.querySelectorAll('.pbtn:not(.plan)').forEach(function(b){
+          b.addEventListener('click', function(){ post('/admin/partner', { email: b.getAttribute('data-email'), is_partner: b.getAttribute('data-to') === '1' }, b); });
+        });
+      })();
+    </script>`;
   return pageShell('SeatX Admin', inner);
 }
 
@@ -3466,6 +3507,57 @@ app.get('/admin', async (req: Request, res: Response) => {
     res.type('html').send(await renderAdminPage(token));
   } catch (e: any) {
     res.status(500).type('html').send('<p>admin error: ' + escapeHtml(e.message) + '</p>');
+  }
+});
+
+// Founder picks partners: flip an account's is_partner flag. Same ADMIN_TOKEN
+// gate as the admin page (404 without it). Only mutates one boolean.
+app.post('/admin/partner', async (req: Request, res: Response) => {
+  const token = process.env.ADMIN_TOKEN || '';
+  const given = String(req.query.key || req.get('x-admin-token') || '');
+  if (!token || given.length !== token.length || !timingSafeEqualStr(given, token)) {
+    return res.status(404).json({ error: 'not_found' });
+  }
+  try {
+    const { email, is_partner } = req.body || {};
+    if (!isValidEmail(email)) return res.status(400).json({ error: 'invalid_email' });
+    const flag = is_partner === true || is_partner === 'true' || is_partner === 1;
+    const r = await pool.query('UPDATE accounts SET is_partner=$1 WHERE email=$2 RETURNING email, is_partner', [flag, email]);
+    if (!r.rows[0]) return res.status(404).json({ error: 'no_such_account' });
+    res.json({ success: true, email: r.rows[0].email, is_partner: r.rows[0].is_partner });
+  } catch (e: any) {
+    res.status(500).json({ error: 'server_error', message: e.message });
+  }
+});
+
+// Founder marks who actually PAID (manual bridge until Stripe). Setting plan to
+// pro/lifetime is the exact signal the partner wallet reads to credit the 10%
+// commission — so this closes the referral→paid→commission loop by hand. Also
+// extends pro_until so the paid user actually gets access. Same ADMIN_TOKEN gate.
+app.post('/admin/plan', async (req: Request, res: Response) => {
+  const token = process.env.ADMIN_TOKEN || '';
+  const given = String(req.query.key || req.get('x-admin-token') || '');
+  if (!token || given.length !== token.length || !timingSafeEqualStr(given, token)) {
+    return res.status(404).json({ error: 'not_found' });
+  }
+  try {
+    const { email, plan } = req.body || {};
+    if (!isValidEmail(email)) return res.status(400).json({ error: 'invalid_email' });
+    if (!['pro', 'lifetime', 'free'].includes(String(plan))) return res.status(400).json({ error: 'invalid_plan' });
+    // pro = a paid month of access; lifetime = effectively forever; free = revoke.
+    const until = plan === 'lifetime' ? `NOW() + INTERVAL '100 years'`
+      : plan === 'pro' ? `NOW() + INTERVAL '31 days'`
+      : `NOW()`;
+    const r = await pool.query(
+      `UPDATE accounts SET plan=$1, pro_until=${until} WHERE email=$2 RETURNING email, plan`,
+      [plan, email]
+    );
+    if (!r.rows[0]) return res.status(404).json({ error: 'no_such_account' });
+    // Mark the referral as qualified/rewarded bookkeeping stays as-is; the
+    // partner wallet derives commission from the paid plan directly.
+    res.json({ success: true, email: r.rows[0].email, plan: r.rows[0].plan });
+  } catch (e: any) {
+    res.status(500).json({ error: 'server_error', message: e.message });
   }
 });
 
