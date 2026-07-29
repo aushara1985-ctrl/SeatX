@@ -8,6 +8,21 @@ import { getPublicConfig } from './push';
 const app = express();
 app.use(express.json({ limit: '64kb' }));
 
+// Canonical site origin for SEO (all canonical/og/sitemap URLs use this).
+const SITE_URL = (process.env.PUBLIC_BASE_URL || 'https://www.seatx.space').replace(/\/$/, '');
+
+// Canonical-host handling for SEO. The bare apex (seatx.space) currently points
+// at a parking IP; if/when its DNS is pointed here, 301 it to www so Google sees
+// one canonical host. The railway.app domain stays reachable (for testing) but
+// is marked noindex so it never competes with www in the index. Canonical <link>
+// tags on every page are the primary signal regardless.
+app.use((req, res, next) => {
+  const host = String(req.headers.host || '').toLowerCase();
+  if (host === 'seatx.space') return res.redirect(301, SITE_URL + req.originalUrl);
+  if (host.includes('railway.app')) res.set('X-Robots-Tag', 'noindex');
+  next();
+});
+
 // FanX by SeatX — World Cup 2026 decision radar. Strictly env-gated. When
 // FANX_ENABLED is not 'true', the router is not mounted and the module tree
 // is not loaded — zero effect on SeatX. All FanX routes live under /fanx/*.
@@ -270,6 +285,28 @@ function getHTML(events: any[], feed: any[], alerts24h: number = 0): string {
 <title>SeatX — السوق المباشر لتذاكر السعودية</title>
 <meta name="description" content="ذكاء سوق مباشر لتذاكر المباريات والحفلات والفعاليات في السعودية. اعرف لحظة رجوع المقاعد قبل أي شخص ثاني."/>
 <meta name="description" lang="en" content="Real-time demand intelligence for Saudi sports, concerts, and events. Know the second seats return — before everyone else."/>
+<link rel="canonical" href="${SITE_URL}/"/>
+<meta name="robots" content="index,follow,max-image-preview:large"/>
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="SeatX"/>
+<meta property="og:title" content="SeatX — السوق المباشر لتذاكر السعودية"/>
+<meta property="og:description" content="اعرف لحظة رجوع المقاعد قبل أي شخص. تنبيهات فورية لتذاكر المباريات والحفلات والفعاليات في السعودية."/>
+<meta property="og:url" content="${SITE_URL}/"/>
+<meta property="og:locale" content="ar_SA"/>
+<meta property="og:locale:alternate" content="en_US"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="SeatX — السوق المباشر لتذاكر السعودية"/>
+<meta name="twitter:description" content="اعرف لحظة رجوع المقاعد قبل أي شخص. تنبيهات فورية للتذاكر في السعودية."/>
+<script type="application/ld+json">${JSON.stringify({
+  '@context': 'https://schema.org',
+  '@graph': [
+    { '@type': 'Organization', '@id': SITE_URL + '/#org', name: 'SeatX', url: SITE_URL + '/',
+      description: 'تنبيهات فورية لرجوع تذاكر المباريات والحفلات والفعاليات في السعودية.',
+      areaServed: 'SA' },
+    { '@type': 'WebSite', '@id': SITE_URL + '/#site', name: 'SeatX', url: SITE_URL + '/',
+      inLanguage: 'ar', publisher: { '@id': SITE_URL + '/#org' } }
+  ]
+})}</script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;0,9..40,900;1,9..40,400&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -2688,6 +2725,30 @@ function getEventHTML(e: any, lang: 'en' | 'ar'): string {
   const shareText = isAr
     ? `شيك على هذا في SeatX — ${e.title} ${eventUrl}`
     : `Check this on SeatX — ${e.title} ${eventUrl}`;
+  // SEO: canonical + structured data. Availability mirrors the real monitored
+  // status (no fabricated dates — event_date is free-text, so startDate is
+  // omitted rather than invented).
+  const canonical = `${SITE_URL}/event/${e.id}`;
+  const availability = e.status === 'available' ? 'InStock' : e.status === 'maybe_available' ? 'LimitedAvailability' : 'SoldOut';
+  const metaDesc = isAr
+    ? `تابع ${e.title} على SeatX. ${e.watchers_count || 0} يتابعون. نبّهك لحظة رجوع المقاعد إذا نفدت التذاكر.`
+    : `Track ${e.title} on SeatX. ${e.watchers_count || 0} watching. Get alerted the second seats return.`;
+  const eventJsonLd = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Event', name: e.title || '', url: canonical, description: metaDesc,
+        ...(e.location ? { location: { '@type': 'Place', name: e.location } } : {}),
+        offers: { '@type': 'Offer', availability: 'https://schema.org/' + availability, url: canonical },
+      },
+      {
+        '@type': 'FAQPage', mainEntity: [
+          { '@type': 'Question', name: `متى ترجع تذاكر ${e.title}؟`, acceptedAnswer: { '@type': 'Answer', text: 'ما فيه وقت مضمون لرجوع التذاكر، لكن SeatX يراقب المصادر الرسمية على مدار الساعة وينبّهك لحظة رجوع المقاعد قبل غيرك.' } },
+          { '@type': 'Question', name: `كيف أتنبّه لرجوع تذاكر ${e.title}؟`, acceptedAnswer: { '@type': 'Answer', text: 'فعّل تنبيه SeatX على صفحة الحدث بإدخال بريدك أو تفعيل الإشعارات، وبيوصلك تنبيه فوري لحظة توفر المقاعد.' } },
+        ],
+      },
+    ],
+  });
 
   return `<!DOCTYPE html>
 <html lang="${lang}" dir="${isAr ? 'rtl' : 'ltr'}">
@@ -2695,9 +2756,18 @@ function getEventHTML(e: any, lang: 'en' | 'ar'): string {
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>${safeTitle} — SeatX</title>
+<meta name="description" content="${escapeHtml(metaDesc)}"/>
+<meta name="robots" content="index,follow,max-image-preview:large"/>
+<link rel="canonical" href="${canonical}"/>
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="SeatX"/>
+<meta property="og:url" content="${canonical}"/>
+<meta property="og:locale" content="${isAr ? 'ar_SA' : 'en_US'}"/>
 <meta property="og:title" content="${safeTitle} — SeatX"/>
-<meta property="og:description" content="${e.watchers_count || 0} ${watchersLabel}. ${demandLabel}"/>
+<meta property="og:description" content="${escapeHtml(metaDesc)}"/>
+<meta name="twitter:card" content="${e.hero_image ? 'summary_large_image' : 'summary'}"/>
 ${e.hero_image ? `<meta property="og:image" content="${escapeHtml(e.hero_image)}"/>` : ''}
+<script type="application/ld+json">${eventJsonLd}</script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -2775,6 +2845,89 @@ app.get('/', async (_req: Request, res: Response) => {
   } catch (_) { }
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.end(getHTML(events, feed, alerts24h));
+});
+
+// ── SEO / GEO ────────────────────────────────────────────────────────────────
+app.get('/robots.txt', (_req: Request, res: Response) => {
+  res.type('text/plain').send(
+    `User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api/\n\nSitemap: ${SITE_URL}/sitemap.xml\n`
+  );
+});
+
+// Plain-language description for LLMs / answer engines (GEO). Helps ChatGPT,
+// Perplexity, Gemini describe + cite SeatX accurately.
+app.get('/llms.txt', (_req: Request, res: Response) => {
+  res.type('text/plain').send(
+`# SeatX
+> ${SITE_URL}
+SeatX هو خدمة تنبيهات فورية لتذاكر المباريات والحفلات والفعاليات في السعودية والخليج.
+عندما تنفد تذاكر حدث، يراقب SeatX المصادر الرسمية (webook، تكت ماستر، إلخ) وينبّهك لحظة رجوع المقاعد قبل غيرك.
+
+## What it does
+- Monitors official ticket sources and alerts users the second sold-out seats return.
+- Sells speed and priority, not tickets. It does not resell tickets or bypass queues.
+- Arabic-first, built for the Saudi/Gulf market.
+
+## Key pages
+- Home: ${SITE_URL}/
+- Events being monitored: ${SITE_URL}/events
+
+## Pricing
+- Free trial (7 days). Pro from $9/mo for founding users (first 1000), then $19/mo. Lifetime $199 (first 100 only).
+`);
+});
+
+app.get('/sitemap.xml', async (_req: Request, res: Response) => {
+  let rows: any[] = [];
+  try { rows = (await pool.query('SELECT id, created_at FROM events ORDER BY id DESC LIMIT 5000')).rows; } catch (_) { }
+  const urls: string[] = [
+    `<url><loc>${SITE_URL}/</loc><changefreq>hourly</changefreq><priority>1.0</priority></url>`,
+    `<url><loc>${SITE_URL}/events</loc><changefreq>hourly</changefreq><priority>0.9</priority></url>`,
+    ...rows.map(r => {
+      const lm = r.created_at ? `<lastmod>${new Date(r.created_at).toISOString().slice(0, 10)}</lastmod>` : '';
+      return `<url><loc>${SITE_URL}/event/${r.id}</loc>${lm}<changefreq>hourly</changefreq><priority>0.8</priority></url>`;
+    }),
+  ];
+  res.type('application/xml').send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>`
+  );
+});
+
+// Public, crawlable index of monitored events — the SEO hub that gives Google a
+// path to every event page and ranks for "تذاكر ... تنبيه رجوع المقاعد" queries.
+app.get('/events', async (_req: Request, res: Response) => {
+  let rows: any[] = [];
+  try { rows = (await pool.query('SELECT id, title, status, watchers_count, event_date, location FROM events ORDER BY demand_score DESC, created_at DESC LIMIT 500')).rows; } catch (_) { }
+  const statusAr = (s: string) => s === 'available' ? '<span class="pill pro">متوفّرة</span>' : s === 'sold_out' ? '<span class="pill" style="color:#fb923c;border-color:rgba(251,146,60,.4)">نفدت</span>' : '<span class="pill">قيد المراقبة</span>';
+  const cards = rows.map(e => `
+    <a class="ev" href="/event/${e.id}">
+      <div class="ev-top"><span class="ev-title">${escapeHtml(e.title || '')}</span>${statusAr(e.status)}</div>
+      <div class="ev-meta">${e.event_date ? '📅 ' + escapeHtml(e.event_date) + ' · ' : ''}${e.location ? '📍 ' + escapeHtml(e.location) + ' · ' : ''}👥 ${e.watchers_count || 0} يتابعون</div>
+    </a>`).join('') || '<p class="mut">لا توجد أحداث مُراقبة حاليًا — أضف حدثك من الصفحة الرئيسية.</p>';
+  const itemList = JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'ItemList',
+    itemListElement: rows.slice(0, 100).map((e, i) => ({ '@type': 'ListItem', position: i + 1, url: `${SITE_URL}/event/${e.id}`, name: e.title })),
+  });
+  const inner = `
+    <div class="brand">SEAT<span class="x">X</span><span style="color:var(--txt2);font-weight:600;font-size:14px">· الأحداث المُراقبة</span></div>
+    <h1 style="font-size:22px;margin:6px 0 8px">تذاكر الأحداث في السعودية — تنبيه لحظة رجوع المقاعد</h1>
+    <p class="sub">SeatX يراقب هذي الأحداث على المصادر الرسمية وينبّهك لحظة ترجع المقاعد إذا نفدت. اختر حدثك وفعّل التنبيه.</p>
+    <div class="evlist">${cards}</div>
+    <div class="linkbox" style="margin-top:18px"><a class="btn" href="/">أضف حدثك + فعّل التنبيه</a></div>
+    <style>
+      .evlist{display:flex;flex-direction:column;gap:10px;margin-top:8px}
+      .ev{display:block;background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:14px 16px;text-decoration:none}
+      .ev:hover{border-color:var(--lime)}
+      .ev-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+      .ev-title{font-weight:700;font-size:15.5px;color:var(--txt)}
+      .ev-meta{color:var(--txt2);font-size:13px;margin-top:5px}
+      h1{color:var(--txt);line-height:1.5}
+    </style>`;
+  res.type('html').send(pageShell('تذاكر الأحداث في السعودية — SeatX', inner, {
+    indexable: true, canonical: SITE_URL + '/events',
+    description: 'قائمة الأحداث والمباريات والحفلات المُراقبة في السعودية. فعّل تنبيه SeatX واعرف لحظة رجوع المقاعد إذا نفدت التذاكر.',
+    jsonld: itemList,
+  }));
 });
 
 app.post('/api/events', async (req: Request, res: Response) => {
@@ -3120,11 +3273,16 @@ async function partnerWallet(code: string): Promise<any | null> {
 
 // Shared shell for the standalone SSR pages (partner + admin). Dark + lime, RTL,
 // self-contained (no SPA assets). `inner` is trusted HTML built by the caller.
-function pageShell(title: string, inner: string): string {
+function pageShell(title: string, inner: string, opts: { indexable?: boolean; canonical?: string; description?: string; jsonld?: string } = {}): string {
+  const robots = opts.indexable ? 'index,follow,max-image-preview:large' : 'noindex,nofollow';
+  const desc = opts.description ? `<meta name="description" content="${escapeHtml(opts.description)}"/>` : '';
+  const canon = opts.canonical ? `<link rel="canonical" href="${escapeHtml(opts.canonical)}"/>` : '';
+  const jsonld = opts.jsonld ? `<script type="application/ld+json">${opts.jsonld}</script>` : '';
   return `<!doctype html><html lang="ar" dir="rtl"><head>
 <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<meta name="robots" content="noindex,nofollow"/>
-<title>${escapeHtml(title)}</title>
+<meta name="robots" content="${robots}"/>
+${desc}${canon}
+<title>${escapeHtml(title)}</title>${jsonld}
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet"/>
 <style>
 :root{--bg:#0a0e14;--surf:#111722;--surf2:#0d1119;--border:#1e2836;--lime:#a3e635;--txt:#e6e9ef;--txt2:#9aa4b2;--mono:'SFMono-Regular',ui-monospace,Menlo,monospace;--orange:#fb923c}
