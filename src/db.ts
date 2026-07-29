@@ -364,6 +364,13 @@ export async function setupDB(): Promise<void> {
     `ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS plan_type TEXT DEFAULT 'free'`,
 `ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS monitoring_status TEXT DEFAULT 'pending'`,
 `ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS last_alert_sent_at TIMESTAMPTZ`,
+    // The UNIQUE(event_id,email) in the CREATE TABLE only applies to fresh DBs;
+    // the live prod table predates it, so /api/subscribe's ON CONFLICT threw
+    // "no unique or exclusion constraint matching the ON CONFLICT specification"
+    // and no user could create a watch. Dedupe any existing pairs, then add the
+    // unique index the ON CONFLICT target needs. Idempotent.
+    `DELETE FROM subscriptions a USING subscriptions b WHERE a.id > b.id AND a.event_id = b.event_id AND a.email = b.email`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS subscriptions_event_email_uniq ON subscriptions(event_id, email)`,
   ];
 
   for (const m of migrations) {
