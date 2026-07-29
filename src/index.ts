@@ -1013,8 +1013,8 @@ ${fanxOn ? `
   <div class="pricing-grid">
     <div class="pricing-card">
       <div class="pc-name" id="pc-pro-name">الأولوية</div>
-      <div class="pc-price">$19</div>
-      <div class="pc-period" id="pc-pro-period">شهرياً</div>
+      <div class="pc-price"><span style="font-size:.48em;font-weight:800;color:var(--muted2);text-decoration:line-through;margin-inline-end:10px;vertical-align:middle">$19</span>$9</div>
+      <div class="pc-period" id="pc-pro-period">شهرياً · سعر المؤسسين للأوائل</div>
       <div class="pc-sub" id="pc-pro-tag" style="color:#fb923c">أسرع تنبيهات. أولوية فحص.</div>
       <div id="pro-founder-live" style="margin:10px 0 4px"></div>
       <div class="pc-features">
@@ -1022,7 +1022,7 @@ ${fanxOn ? `
         <div class="pc-f" id="pc-pro-f2">أولوية فحص أعلى من المجاني</div>
         <div class="pc-f" id="pc-pro-f3">وصول كامل لذكاء السوق</div>
       </div>
-      <button class="pc-btn" id="pc-pro-btn" onclick="openUpgradeModal('pro')">احصل على الأولوية — $19</button>
+      <button class="pc-btn" id="pc-pro-btn" onclick="openUpgradeModal('pro')">اقفل ٩$ شهريًا مدى الحياة</button>
     </div>
     <div class="pricing-card pricing-lifetime">
       <div class="pc-badge" id="pc-life-badge">💎 المؤسسون · للأوائل</div>
@@ -1159,12 +1159,12 @@ const T = {
     // Pricing — sells priority/speed/access, not features or limits
     prcEye: '💎 Market access', prcH1: 'Speed decides who catches and who misses',
     prcSub: "We don't sell features or limits. We sell <strong style='color:#fff'>priority</strong>, <strong style='color:#fff'>speed</strong>, and <strong style='color:#fff'>live market access</strong>.",
-    pcProName: 'Priority', pcProPeriod: 'per month',
+    pcProName: 'Priority', pcProPeriod: 'per month · founder price',
     pcProTag: 'Fastest alerts. Priority monitoring.',
     pcProF1: 'Live alerts the second seats return',
     pcProF2: 'Priority monitoring (faster than free)',
     pcProF3: 'Full market intelligence access',
-    pcProBtn: 'Get priority — $19',
+    pcProBtn: 'Lock $9/mo for life',
     pcLifeBadge: '💎 Founding Users · Early only',
     pcLifeName: 'Lifetime access', pcLifePeriod: 'one-time',
     pcLifeSub: 'Founding-user price. Increases after a limited number of seats.',
@@ -1181,7 +1181,7 @@ const T = {
     fomoVeryHigh: '🔥 Selling fast — high demand', fomoHigh: '⚡ People joining right now', fomoMedium: '👀 Demand picking up',
     upgradeTitle: 'Join the {plan} waitlist', upgradeSub: 'Checkout opens soon. Drop your email and we\\'ll let you know first.',
     upgradeBtn: 'Join waitlist', upgradeJoined: '✅ You\\'re on the list. We\\'ll email you when checkout opens.',
-    upgradeEntry: 'Entry ($9/mo)', upgradePro: 'Pro ($19/mo)', upgradeLifetime: 'Lifetime ($199)',
+    upgradeEntry: 'Entry ($9/mo)', upgradePro: 'Pro — $9/mo for life (founder, then $19)', upgradeLifetime: 'Lifetime ($199)',
     shareTitle: 'Share this event', shareWA: 'WhatsApp', shareTW: 'X / Twitter', shareCopy: 'Copy link', shareCopied: '✓ Copied!',
     shareText: 'Check this on SeatX',
     myAlertsTitle: 'My Alerts', myAlertsSub: 'Enter your email to see events you are tracking.',
@@ -1292,12 +1292,12 @@ const T = {
     // Pricing — السرعة والأولوية، ليس features أو حدود
     prcEye: '💎 الوصول للسوق', prcH1: 'السرعة تحدّد من يمسك ومن يفوّته',
     prcSub: 'ما نبيع features أو حدود تقنية. نبيع <strong style="color:#fff">الأولوية</strong> و<strong style="color:#fff">السرعة</strong> و<strong style="color:#fff">الوصول للسوق المباشر</strong>.',
-    pcProName: 'الأولوية', pcProPeriod: 'شهرياً',
+    pcProName: 'الأولوية', pcProPeriod: 'شهرياً · سعر المؤسسين للأوائل',
     pcProTag: 'أسرع تنبيهات. أولوية فحص.',
     pcProF1: 'تنبيهات لحظية لما المقاعد ترجع',
     pcProF2: 'أولوية فحص أعلى من المجاني',
     pcProF3: 'وصول كامل لذكاء السوق',
-    pcProBtn: 'احصل على الأولوية — $19',
+    pcProBtn: 'اقفل ٩$ شهريًا مدى الحياة',
     pcLifeBadge: '💎 المؤسسون · للأوائل',
     pcLifeName: 'وصول مدى الحياة', pcLifePeriod: 'دفعة واحدة',
     pcLifeSub: 'سعر المؤسسين الأوائل. يرتفع بعد عدد محدود من المقاعد.',
@@ -1314,7 +1314,7 @@ const T = {
     fomoVeryHigh: '🔥 يُباع بسرعة — طلب مرتفع', fomoHigh: '⚡ مستخدمون ينضمّون الآن', fomoMedium: '👀 الطلب يرتفع',
     upgradeTitle: 'انضم لقائمة انتظار {plan}', upgradeSub: 'الدفع يفتح قريباً. اترك بريدك ونعلمك أول واحد.',
     upgradeBtn: 'انضم', upgradeJoined: '✅ أنت في القائمة. سنراسلك عند فتح الدفع.',
-    upgradeEntry: 'Entry ($9/شهر)', upgradePro: 'Pro ($19/شهر)', upgradeLifetime: 'Lifetime ($199)',
+    upgradeEntry: 'Entry ($9/شهر)', upgradePro: 'Pro — ٩$/شهر مدى الحياة (للأوائل، بعدها ١٩$)', upgradeLifetime: 'Lifetime ($199)',
     shareTitle: 'شارك الفعالية', shareWA: 'واتساب', shareTW: 'تويتر', shareCopy: 'نسخ الرابط', shareCopied: '✓ تم النسخ!',
     shareText: 'شيك على هذا في SeatX',
     myAlertsTitle: 'تنبيهاتي', myAlertsSub: 'اكتب بريدك لرؤية الفعاليات اللي تتابعها.',
@@ -2483,8 +2483,8 @@ async function loadFounderCounter() {
       const pct = Math.min(100, Math.round((joined / d.founder_cap) * 100));
       proEl.innerHTML =
         '<div style="font-size:12px;color:var(--lime);font-family:var(--mono);font-weight:700">'
-        + (ar ? '🔥 أول ' + d.founder_cap + ' يقفلون ٩$ مدى الحياة · باقي ' + fRemain
-              : '🔥 First ' + d.founder_cap + ' lock $9 for life · ' + fRemain + ' left')
+        + (ar ? '🔥 ٩$ الآن (بدل ١٩$) — مقفول مدى الحياة · باقي ' + fRemain + ' من ' + d.founder_cap
+              : '🔥 $9 now (not $19) — locked for life · ' + fRemain + ' of ' + d.founder_cap + ' left')
         + '</div>'
         + '<div style="height:5px;border-radius:999px;background:rgba(255,255,255,.08);margin-top:6px;overflow:hidden">'
         + '<div style="height:100%;width:' + Math.max(3, pct) + '%;background:var(--lime);border-radius:999px"></div></div>';
