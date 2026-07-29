@@ -139,6 +139,40 @@ export async function setupDB(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_er_status ON event_requests(status);
     CREATE INDEX IF NOT EXISTS idx_er_created ON event_requests(created_at DESC);
 
+    -- Selling spine: one account per email. Carries the founder number
+    -- (scarcity), the trial window (pro_until), the plan, and the referral
+    -- code. Email/guest-keyed for now; a secure magic-link session is a later
+    -- hardening. Everything the smart-sell needs (countdown, founder counter,
+    -- referral) hangs off this table.
+    CREATE TABLE IF NOT EXISTS accounts (
+      id SERIAL PRIMARY KEY,
+      email TEXT UNIQUE NOT NULL,
+      guest_id TEXT,
+      founder_number INTEGER,
+      plan TEXT DEFAULT 'trial',            -- trial | free | pro | lifetime
+      pro_until TIMESTAMPTZ,                -- when trial/pro speed access ends
+      referral_code TEXT UNIQUE,
+      referred_by TEXT,                     -- referral_code of the inviter
+      first_watch_at TIMESTAMPTZ,           -- referral qualifies on first real watch
+      referral_days_earned INTEGER DEFAULT 0,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_acc_refcode ON accounts(referral_code);
+    CREATE INDEX IF NOT EXISTS idx_acc_referredby ON accounts(referred_by);
+
+    -- Referral ledger: one row per invited signup. Qualifies (and rewards both
+    -- sides +1 day) only after the invitee activates their first watch.
+    CREATE TABLE IF NOT EXISTS referral_events (
+      id SERIAL PRIMARY KEY,
+      referrer_code TEXT NOT NULL,
+      referred_email TEXT NOT NULL,
+      status TEXT DEFAULT 'pending',        -- pending | qualified | rewarded
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(referrer_code, referred_email)
+    );
+    CREATE INDEX IF NOT EXISTS idx_re_refcode ON referral_events(referrer_code);
+    CREATE INDEX IF NOT EXISTS idx_re_status ON referral_events(status);
+
     -- Phase 2 Smart Detection Agent — Context Layer (rule-based, no AI).
     -- Persists per-event memory so the detection agent can decide whether a
     -- detected change is meaningful enough to alert users on. No prediction,

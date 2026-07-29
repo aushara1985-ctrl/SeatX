@@ -949,7 +949,9 @@ ${fanxOn ? `
     <p style="font-size:13px;color:var(--muted2);margin-top:6px" id="acc-subtitle">إعداداتك في السوق</p>
   </div>
 
-  <!-- Plan status (read-only for MVP) -->
+  <!-- Plan status — filled live by renderAccountStatus() from GET /api/account.
+       Shows: founder number (scarcity), trial countdown (loss-frame), plan.
+       Falls back to the static "مجاني" until an account is loaded. -->
   <div class="acc-block">
     <div class="acc-h" id="acc-plan-h">خطتك الحالية</div>
     <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:6px">
@@ -959,6 +961,14 @@ ${fanxOn ? `
       </div>
       <button class="gbtn" style="padding:10px 16px;font-size:13px;border-radius:10px;white-space:nowrap" onclick="openUpgradeModal('pro')" id="acc-upgrade-btn">الترقية</button>
     </div>
+    <div id="acc-founder" style="margin-top:12px"></div>
+  </div>
+
+  <!-- Referral — filled live by renderAccountStatus() -->
+  <div class="acc-block" id="acc-ref-block" style="display:none">
+    <div class="acc-h" id="acc-ref-h">ادعُ أصدقاءك — اكسب أيام Pro</div>
+    <div class="acc-sub" id="acc-ref-sub">كل صديق يسجّل من رابطك ويفعّل أول مراقبة = <strong style="color:var(--lime)">+1 يوم Pro</strong> لك وله.</div>
+    <div id="acc-ref-body"></div>
   </div>
 
   <!-- Notification status (push permission + saved email indicator) -->
@@ -1831,6 +1841,7 @@ async function queueModeSubmit() {
     });
     if (!res.ok) throw new Error('submit failed');
     try { localStorage.setItem('seatx_last_email', email); } catch (_) { }
+    ensureAccount(email);
     // Hide the form, show the rich success card with summary + watch list.
     document.querySelectorAll('#queue-mode .form-label, #queue-mode .form-input, #queue-mode .qm-seg, #queue-mode #qm-btn, #queue-mode #qm-bullets, #queue-mode #qm-disclaimer').forEach(el => { el.style.display = 'none'; });
     const conf = document.getElementById('qm-confirm');
@@ -1868,6 +1879,7 @@ async function requestEvent() {
     });
     if (!r.ok) throw new Error('failed');
     try { localStorage.setItem('seatx_last_email', email); } catch (_) { }
+    ensureAccount(email);
     tryEnablePush(email);
     // Collapse the form, show confirmation.
     ['rq-l-name','rq-event','rq-l-city','rq-city','rq-l-email','rq-email','rq-btn','rq-note'].forEach(id => {
@@ -1899,6 +1911,7 @@ async function subscribe(id, btnEl) {
     }
     if (!r.ok) throw new Error(data.message || 'failed');
     tryEnablePush(email);
+    ensureAccount(email);
     if (btnEl) {
       btnEl.textContent = '✅';
       btnEl.style.background = 'rgba(163,230,53,.2)';
@@ -2411,6 +2424,108 @@ function renderAccountStatus() {
       emailText.textContent = t.notifEmailOff || '○ ما اتسجّل بريد بعد';
     }
   }
+  // Founder / trial / referral — live from GET /api/account (needs a saved email).
+  if (savedEmail) loadAccountCard(savedEmail);
+}
+
+// ── Account identity + selling spine (client) ──────────────────────────────
+// Capture ?ref=CODE once and remember it for the eventual signup.
+function captureRef() {
+  try {
+    const p = new URLSearchParams(location.search).get('ref');
+    if (p && /^SX[A-Z2-9]{5}$/.test(p)) localStorage.setItem('seatx_ref', p);
+  } catch (_) { }
+}
+function getRef() { try { return localStorage.getItem('seatx_ref') || null; } catch (_) { return null; } }
+
+// Create/fetch the account for an email. Called whenever we capture an email,
+// so every user quietly gets a founder number + 7-day trial + referral code.
+// Best-effort; never blocks the calling flow.
+async function ensureAccount(email) {
+  if (!email || email.indexOf('@') === -1) return null;
+  try {
+    const r = await fetch('/api/account', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, guest_id: (window.fxGuest ? window.fxGuest() : null), ref: getRef() }),
+    });
+    const d = await r.json();
+    return (d && d.account) ? d.account : null;
+  } catch (_) { return null; }
+}
+
+// Render the founder/trial card + referral block from a GET /api/account.
+async function loadAccountCard(email) {
+  const founder = document.getElementById('acc-founder');
+  const refBlock = document.getElementById('acc-ref-block');
+  const refBody = document.getElementById('acc-ref-body');
+  let acc = null;
+  try {
+    const r = await fetch('/api/account?email=' + encodeURIComponent(email));
+    if (r.ok) { const d = await r.json(); acc = d && d.account; }
+    else if (r.status === 404) { acc = await ensureAccount(email); }  // auto-create if missing
+  } catch (_) { }
+  if (!acc) return;
+
+  // Plan headline + trial countdown (loss-frame) OR trial-ended sell.
+  const planNameEl = document.getElementById('acc-plan-name');
+  const planLimitEl = document.getElementById('acc-plan-limit');
+  if (acc.pro_active) {
+    if (planNameEl) planNameEl.textContent = acc.plan === 'lifetime' ? 'Lifetime 💎' : acc.plan === 'pro' ? 'Pro' : 'Pro (تجربة)';
+    if (planLimitEl) planLimitEl.textContent = 'باقي ' + acc.days_left + ' يوم · أسرع تنبيهات';
+  } else {
+    if (planNameEl) planNameEl.textContent = 'مجاني';
+    if (planLimitEl) planLimitEl.textContent = 'انتهت تجربتك — تنبيهاتك أبطأ الآن';
+  }
+
+  // Founder scarcity + trial-ended sell copy.
+  if (founder) {
+    let html = '';
+    if (acc.founder_number) {
+      const spot = acc.founder_number;
+      if (acc.founder_pro_available) {
+        html += '<div style="font-size:12.5px;color:var(--lime);font-family:var(--mono)">💎 أنت المؤسس رقم ' + spot + ' من ' + acc.founder_cap + ' — سعرك ٩$ مقفول مدى الحياة</div>';
+      } else {
+        html += '<div style="font-size:12.5px;color:var(--muted2);font-family:var(--mono)">أنت العضو رقم ' + spot + '</div>';
+      }
+    }
+    if (!acc.pro_active) {
+      // No inline onclick with quoted args here — building it inside a
+      // single-quoted JS string collides with the 'pro' quotes and breaks the
+      // whole script. Attach the handler after innerHTML instead.
+      html += '<div style="margin-top:10px;padding:12px 14px;border-radius:10px;background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.2);font-size:13px;line-height:1.7;color:#e4e4e7">'
+        + '<strong style="color:#fb923c">انتهت تجربتك Pro ⚡</strong><br>رجّع السرعة: '
+        + '<button class="pc-btn" id="acc-trial-upgrade" style="width:auto;padding:6px 12px;margin:6px 6px 0 0;display:inline-block;font-size:12px">ترقية ٩$</button>'
+        + '<span style="color:var(--muted2);font-size:12px">أو ادعُ صديق = +1 يوم مجانًا</span>'
+        + '</div>';
+    }
+    founder.innerHTML = html;
+    var upBtn = document.getElementById('acc-trial-upgrade');
+    if (upBtn) upBtn.addEventListener('click', function () { openUpgradeModal('pro'); });
+  }
+
+  // Referral block.
+  if (refBlock && refBody && acc.referral_url) {
+    refBlock.style.display = 'block';
+    const qualified = (typeof acc.referrals_qualified === 'number') ? acc.referrals_qualified : 0;
+    const earned = acc.referral_days_earned || 0;
+    refBody.innerHTML = ''
+      + '<div style="display:flex;gap:8px;margin-top:12px">'
+      +   '<input class="modal-input" id="acc-ref-url" readonly value="' + escapeHtmlClient(acc.referral_url) + '" style="margin-bottom:0;font-size:13px;direction:ltr;text-align:left"/>'
+      +   '<button class="gbtn" style="padding:12px 18px;font-size:13px;border-radius:11px;white-space:nowrap" onclick="copyRefLink()">نسخ</button>'
+      + '</div>'
+      + '<div style="display:flex;gap:8px;margin-top:8px">'
+      +   '<a class="pc-btn" style="flex:1;text-decoration:none;text-align:center;padding:11px" href="https://wa.me/?text=' + encodeURIComponent('جرّب SeatX — ما تفوّت تذكرة إذا رجعت: ' + acc.referral_url) + '" target="_blank" rel="noopener">مشاركة واتساب</a>'
+      + '</div>'
+      + '<div style="margin-top:10px;font-size:12px;color:var(--muted2);font-family:var(--mono)">دعوات مؤهّلة: ' + qualified + ' · أيام كسبتها: ' + earned + '</div>';
+  }
+}
+
+function copyRefLink() {
+  const el = document.getElementById('acc-ref-url');
+  if (!el) return;
+  try { navigator.clipboard.writeText(el.value); if (window.fxToast) {} }
+  catch (_) { el.select(); try { document.execCommand('copy'); } catch (__) {} }
+  alert('تم نسخ رابط دعوتك ✅');
 }
 
 // Re-pull the alerts feed when the Alerts tab is opened or refresh tapped.
@@ -2461,11 +2576,15 @@ function prefillSavedEmail() {
 
 document.addEventListener('DOMContentLoaded', () => {
   // Arabic-first: load AR by default. User can toggle EN via the nav switch.
+  captureRef();               // grab ?ref=CODE before anything else
   setLang('ar');
   initTimers();
   animateScoreBars();
   startRotatingPlaceholder();
   prefillSavedEmail();
+  // If we already know the user's email, quietly ensure their account exists
+  // (founder number + trial) so the profile is populated when they open it.
+  try { const e = localStorage.getItem('seatx_last_email'); if (e) ensureAccount(e); } catch (_) { }
   // Initial tab = home. switchTab also handles the .active-tab class set we
   // ship in the static HTML (everything tagged data-tab="home" already has
   // .active-tab), so this is a no-op on first paint but keeps state aligned.
@@ -2684,6 +2803,9 @@ app.post('/api/subscribe', async (req: Request, res: Response) => {
           await logActivity(idNum, 'watcher_added', `👥 ${ev.rows[0].title} — متابع جديد انضم للسوق`);
         }
       } catch (_) { }
+      // Referral qualification: a real watch is the gate. Best-effort, never
+      // blocks the subscribe response.
+      qualifyReferralOnFirstWatch(email).catch(() => {});
     }
     res.json({ success: true, inserted });
   } catch (e: any) {
@@ -2794,6 +2916,164 @@ app.post('/api/request-event', async (req: Request, res: Response) => {
       [email, eventName.trim(), cityStr]
     );
     res.json({ success: true });
+  } catch (e: any) {
+    res.status(500).json({ error: 'server_error', message: e.message });
+  }
+});
+
+// ─── Accounts / selling spine ──────────────────────────────────────────────
+// Trial length + founder caps are env-overridable so we can tune the sell
+// without a redeploy.
+const TRIAL_DAYS = parseInt(process.env.TRIAL_DAYS || '7', 10);
+const FOUNDER_PRO_CAP = parseInt(process.env.FOUNDER_PRO_CAP || '1000', 10);   // $9/mo lock
+const LIFETIME_CAP = parseInt(process.env.LIFETIME_CAP || '100', 10);          // $199 lifetime
+
+function genReferralCode(): string {
+  // Short, unambiguous (no 0/O/1/I). Prefixed for readability in share text.
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let s = '';
+  for (let i = 0; i < 5; i++) s += alphabet[Math.floor(Math.random() * alphabet.length)];
+  return 'SX' + s;
+}
+
+// First real watch is the referral gate. On the invitee's first watch we:
+// stamp accounts.first_watch_at, then reward BOTH sides +1 day of Pro (extend
+// pro_until). Idempotent — only qualifies rows still 'pending', so it can't
+// double-reward. Never throws (caller swallows).
+async function qualifyReferralOnFirstWatch(email: string): Promise<void> {
+  // Ensure the invitee has an account + stamp first watch (once).
+  const acc = await pool.query('SELECT * FROM accounts WHERE email=$1', [email]).catch(() => ({ rows: [] as any[] }));
+  const me = acc.rows[0];
+  if (!me) return;                       // no account -> nothing to qualify
+  if (me.first_watch_at) return;         // already had a first watch -> done
+  await pool.query('UPDATE accounts SET first_watch_at=NOW() WHERE email=$1 AND first_watch_at IS NULL', [email]).catch(() => {});
+
+  // Any pending referral where THIS user was the invitee?
+  const pend = await pool.query(
+    `SELECT * FROM referral_events WHERE referred_email=$1 AND status='pending'`,
+    [email]
+  ).catch(() => ({ rows: [] as any[] }));
+  for (const r of pend.rows) {
+    // Reward the referrer (+1 day) — find them by their code.
+    await pool.query(
+      `UPDATE accounts SET pro_until = GREATEST(COALESCE(pro_until, NOW()), NOW()) + INTERVAL '1 day',
+                           referral_days_earned = COALESCE(referral_days_earned,0) + 1
+        WHERE referral_code = $1`,
+      [r.referrer_code]
+    ).catch(() => {});
+    // Reward the invitee (+1 day).
+    await pool.query(
+      `UPDATE accounts SET pro_until = GREATEST(COALESCE(pro_until, NOW()), NOW()) + INTERVAL '1 day',
+                           referral_days_earned = COALESCE(referral_days_earned,0) + 1
+        WHERE email = $1`,
+      [email]
+    ).catch(() => {});
+    await pool.query(`UPDATE referral_events SET status='rewarded' WHERE id=$1`, [r.id]).catch(() => {});
+  }
+}
+
+function accountView(row: any): Record<string, unknown> {
+  const now = Date.now();
+  const proUntil = row.pro_until ? new Date(row.pro_until).getTime() : 0;
+  const msLeft = Math.max(0, proUntil - now);
+  const daysLeft = Math.ceil(msLeft / 86_400_000);
+  const proActive = msLeft > 0 && (row.plan === 'trial' || row.plan === 'pro' || row.plan === 'lifetime');
+  const base = process.env.PUBLIC_BASE_URL || 'https://seatx.space';
+  const fn = row.founder_number || null;
+  return {
+    email: row.email,
+    founder_number: fn,
+    founder_pro_available: fn ? fn <= FOUNDER_PRO_CAP : true,   // eligible for $9 lock
+    founder_lifetime_available: fn ? fn <= LIFETIME_CAP : true, // eligible for $199
+    founder_cap: FOUNDER_PRO_CAP,
+    lifetime_cap: LIFETIME_CAP,
+    plan: row.plan,
+    pro_active: proActive,
+    pro_until: row.pro_until,
+    days_left: proActive ? daysLeft : 0,
+    referral_code: row.referral_code,
+    referral_url: row.referral_code ? (base + '/?ref=' + row.referral_code) : null,
+    referral_days_earned: row.referral_days_earned || 0,
+  };
+}
+
+// Create (or fetch) the account for an email. Idempotent: returns the same
+// account on repeat calls. First creation assigns the next founder number,
+// starts the 7-day trial, mints a referral code, and — if a valid ?ref came
+// in — records a pending referral (qualifies later on first watch).
+app.post('/api/account', async (req: Request, res: Response) => {
+  try {
+    if (!rateLimit('acct:' + getIP(req), 10, 60_000)) {
+      return res.status(429).json({ error: 'rate_limit' });
+    }
+    const { email, guest_id, ref } = req.body || {};
+    if (!isValidEmail(email)) return res.status(400).json({ error: 'invalid_email' });
+    const guest = typeof guest_id === 'string' ? guest_id.slice(0, 40) : null;
+    const refCode = (typeof ref === 'string' && /^SX[A-Z2-9]{5}$/.test(ref)) ? ref : null;
+
+    // Already exists? return it (idempotent).
+    const existing = await pool.query('SELECT * FROM accounts WHERE email=$1', [email]);
+    if (existing.rows[0]) {
+      return res.json({ success: true, account: accountView(existing.rows[0]), isNew: false });
+    }
+
+    // Assign the next founder number.
+    const cnt = await pool.query('SELECT COALESCE(MAX(founder_number),0) AS m FROM accounts');
+    const founderNumber = (cnt.rows[0]?.m || 0) + 1;
+
+    // Mint a referral code, retry once on the (unlikely) collision.
+    let code = genReferralCode();
+    const proUntilSql = `NOW() + ($3 || ' days')::interval`;
+    let ins;
+    try {
+      ins = await pool.query(
+        `INSERT INTO accounts (email, guest_id, founder_number, plan, pro_until, referral_code, referred_by)
+         VALUES ($1,$2,$4,'trial', ${proUntilSql}, $5, $6) RETURNING *`,
+        [email, guest, String(TRIAL_DAYS), founderNumber, code, refCode]
+      );
+    } catch (_) {
+      code = genReferralCode();
+      ins = await pool.query(
+        `INSERT INTO accounts (email, guest_id, founder_number, plan, pro_until, referral_code, referred_by)
+         VALUES ($1,$2,$4,'trial', ${proUntilSql}, $5, $6) RETURNING *`,
+        [email, guest, String(TRIAL_DAYS), founderNumber, code, refCode]
+      );
+    }
+
+    // Record the pending referral (rewards on first watch, not now).
+    if (refCode && refCode !== code) {
+      await pool.query(
+        `INSERT INTO referral_events (referrer_code, referred_email, status)
+         VALUES ($1,$2,'pending') ON CONFLICT (referrer_code, referred_email) DO NOTHING`,
+        [refCode, email]
+      ).catch(() => {});
+    }
+
+    res.json({ success: true, account: accountView(ins.rows[0]), isNew: true });
+  } catch (e: any) {
+    res.status(500).json({ error: 'server_error', message: e.message });
+  }
+});
+
+app.get('/api/account', async (req: Request, res: Response) => {
+  try {
+    if (!rateLimit('acctg:' + getIP(req), 30, 60_000)) {
+      return res.status(429).json({ error: 'rate_limit' });
+    }
+    const email = String(req.query.email || '');
+    if (!isValidEmail(email)) return res.status(400).json({ error: 'invalid_email' });
+    const r = await pool.query('SELECT * FROM accounts WHERE email=$1', [email]);
+    if (!r.rows[0]) return res.status(404).json({ error: 'not_found' });
+    // Also surface how many of this account's referrals have qualified.
+    let qualified = 0;
+    try {
+      const q = await pool.query(
+        `SELECT COUNT(*)::int AS c FROM referral_events WHERE referrer_code=$1 AND status IN ('qualified','rewarded')`,
+        [r.rows[0].referral_code]
+      );
+      qualified = q.rows[0]?.c || 0;
+    } catch (_) { }
+    res.json({ success: true, account: { ...accountView(r.rows[0]), referrals_qualified: qualified } });
   } catch (e: any) {
     res.status(500).json({ error: 'server_error', message: e.message });
   }
