@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { createHash } from 'crypto';
+import { createHash, timingSafeEqual } from 'crypto';
 import { pool, setupDB, getActiveEventCount } from './db';
 import { runMonitorCycle } from './monitor';
 import { getActivityFeed, logActivity } from './feed';
@@ -91,6 +91,17 @@ function escapeHtml(s: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+// Constant-time string compare for the admin token (avoids leaking length/timing
+// beyond the length pre-check the caller already does). Returns false on any
+// mismatch or error rather than throwing.
+function timingSafeEqualStr(a: string, b: string): boolean {
+  try {
+    const ba = Buffer.from(a); const bb = Buffer.from(b);
+    if (ba.length !== bb.length) return false;
+    return timingSafeEqual(ba, bb);
+  } catch { return false; }
 }
 
 // =============================================================================
@@ -1005,6 +1016,7 @@ ${fanxOn ? `
       <div class="pc-price">$19</div>
       <div class="pc-period" id="pc-pro-period">شهرياً</div>
       <div class="pc-sub" id="pc-pro-tag" style="color:#fb923c">أسرع تنبيهات. أولوية فحص.</div>
+      <div id="pro-founder-live" style="margin:10px 0 4px"></div>
       <div class="pc-features">
         <div class="pc-f" id="pc-pro-f1">تنبيهات لحظية لما المقاعد ترجع</div>
         <div class="pc-f" id="pc-pro-f2">أولوية فحص أعلى من المجاني</div>
@@ -1018,6 +1030,7 @@ ${fanxOn ? `
       <div class="pc-price">$199</div>
       <div class="pc-period" id="pc-life-period">دفعة واحدة</div>
       <div class="pc-sub" id="pc-life-sub">سعر المؤسسين الأوائل. يرتفع بعد عدد محدود من المقاعد.</div>
+      <div id="founder-live" style="margin:10px 0 4px"></div>
       <div class="pc-features">
         <div class="pc-f" id="pc-life-f1">كل مميزات الأولوية، للأبد</div>
         <div class="pc-f" id="pc-life-f2">أعلى مستوى وصول للسوق</div>
@@ -2433,10 +2446,58 @@ function renderAccountStatus() {
 function captureRef() {
   try {
     const p = new URLSearchParams(location.search).get('ref');
-    if (p && /^SX[A-Z2-9]{5}$/.test(p)) localStorage.setItem('seatx_ref', p);
+    if (p && /^SX[A-Z2-9]{5}$/.test(p)) {
+      localStorage.setItem('seatx_ref', p);
+      // Count the click once per browser per code (top of the partner funnel).
+      // Guarded by localStorage so a refresh doesn't re-count; server also
+      // dampens per-IP. Fire-and-forget.
+      try {
+        var hitKey = 'seatx_refhit_' + p;
+        if (!localStorage.getItem(hitKey)) {
+          localStorage.setItem(hitKey, '1');
+          fetch('/api/ref-hit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true, body: JSON.stringify({ code: p }) }).catch(function () { });
+        }
+      } catch (_) { }
+    }
   } catch (_) { }
 }
 function getRef() { try { return localStorage.getItem('seatx_ref') || null; } catch (_) { return null; } }
+
+// Live scarcity counters on the pricing cards. Pulls aggregate counts from
+// /api/stats and fills the founder ($9/1000) + lifetime ($199/100) lines with
+// real "spots remaining" numbers. Kept separate from the language-controlled
+// badge so a lang toggle can't wipe it. Silent on failure (cards still valid).
+async function loadFounderCounter() {
+  var proEl = document.getElementById('pro-founder-live');
+  var lifeEl = document.getElementById('founder-live');
+  if (!proEl && !lifeEl) return;
+  var ar = (typeof lang === 'undefined' || lang === 'ar');
+  try {
+    const r = await fetch('/api/stats');
+    if (!r.ok) return;
+    const d = await r.json();
+    const fRemain = typeof d.founder_remaining === 'number' ? d.founder_remaining : null;
+    const lRemain = typeof d.lifetime_remaining === 'number' ? d.lifetime_remaining : null;
+    if (proEl && fRemain !== null) {
+      const joined = d.founder_cap - fRemain;
+      const pct = Math.min(100, Math.round((joined / d.founder_cap) * 100));
+      proEl.innerHTML =
+        '<div style="font-size:12px;color:var(--lime);font-family:var(--mono);font-weight:700">'
+        + (ar ? '🔥 أول ' + d.founder_cap + ' يقفلون ٩$ مدى الحياة · باقي ' + fRemain
+              : '🔥 First ' + d.founder_cap + ' lock $9 for life · ' + fRemain + ' left')
+        + '</div>'
+        + '<div style="height:5px;border-radius:999px;background:rgba(255,255,255,.08);margin-top:6px;overflow:hidden">'
+        + '<div style="height:100%;width:' + Math.max(3, pct) + '%;background:var(--lime);border-radius:999px"></div></div>';
+    }
+    if (lifeEl && lRemain !== null) {
+      lifeEl.innerHTML =
+        '<div style="font-size:12px;color:#c084fc;font-family:var(--mono);font-weight:700">'
+        + (ar ? '💎 باقي ' + lRemain + ' مقعد Lifetime من ' + d.lifetime_cap + ' — ثم يغلق للأبد'
+              : '💎 ' + lRemain + ' of ' + d.lifetime_cap + ' Lifetime seats left — then closed forever')
+        + '</div>';
+    }
+  } catch (_) { }
+}
 
 // Create/fetch the account for an email. Called whenever we capture an email,
 // so every user quietly gets a founder number + 7-day trial + referral code.
@@ -2515,6 +2576,7 @@ async function loadAccountCard(email) {
       + '</div>'
       + '<div style="display:flex;gap:8px;margin-top:8px">'
       +   '<a class="pc-btn" style="flex:1;text-decoration:none;text-align:center;padding:11px" href="https://wa.me/?text=' + encodeURIComponent('جرّب SeatX — ما تفوّت تذكرة إذا رجعت: ' + acc.referral_url) + '" target="_blank" rel="noopener">مشاركة واتساب</a>'
+      +   (acc.partner_url ? '<a class="pc-btn" style="flex:1;text-decoration:none;text-align:center;padding:11px;background:transparent;border:1px solid var(--border);color:var(--lime)" href="' + escapeHtmlClient(acc.partner_url) + '" target="_blank" rel="noopener">لوحة الشريك 📊</a>' : '')
       + '</div>'
       + '<div style="margin-top:10px;font-size:12px;color:var(--muted2);font-family:var(--mono)">دعوات مؤهّلة: ' + qualified + ' · أيام كسبتها: ' + earned + '</div>';
   }
@@ -2582,6 +2644,7 @@ document.addEventListener('DOMContentLoaded', () => {
   animateScoreBars();
   startRotatingPlaceholder();
   prefillSavedEmail();
+  loadFounderCounter();       // live "spots remaining" scarcity on pricing cards
   // If we already know the user's email, quietly ensure their account exists
   // (founder number + trial) so the profile is populated when they open it.
   try { const e = localStorage.getItem('seatx_last_email'); if (e) ensureAccount(e); } catch (_) { }
@@ -2993,8 +3056,204 @@ function accountView(row: any): Record<string, unknown> {
     days_left: proActive ? daysLeft : 0,
     referral_code: row.referral_code,
     referral_url: row.referral_code ? (base + '/?ref=' + row.referral_code) : null,
+    partner_url: row.referral_code ? (base + '/partner?code=' + row.referral_code) : null,
     referral_days_earned: row.referral_days_earned || 0,
+    referral_clicks: row.referral_clicks || 0,
   };
+}
+
+// One place that computes an ambassador's funnel from a referral code:
+//   clicks (link taps) -> signups (accounts created via the link)
+//   -> qualified (activated first watch) ; plus days earned + conversion.
+// Returns null if the code doesn't belong to a real account.
+async function partnerFunnel(code: string): Promise<any | null> {
+  const acc = await pool.query('SELECT * FROM accounts WHERE referral_code=$1', [code]).catch(() => ({ rows: [] as any[] }));
+  const owner = acc.rows[0];
+  if (!owner) return null;
+  const signupsQ = await pool.query('SELECT COUNT(*)::int c FROM referral_events WHERE referrer_code=$1', [code]).catch(() => ({ rows: [{ c: 0 }] }));
+  const qualQ = await pool.query(`SELECT COUNT(*)::int c FROM referral_events WHERE referrer_code=$1 AND status IN ('qualified','rewarded')`, [code]).catch(() => ({ rows: [{ c: 0 }] }));
+  const clicks = owner.referral_clicks || 0;
+  const signups = signupsQ.rows[0]?.c || 0;
+  const qualified = qualQ.rows[0]?.c || 0;
+  const daysEarned = owner.referral_days_earned || 0;
+  const convClickSignup = clicks > 0 ? Math.round((signups / clicks) * 100) : 0;
+  const convSignupQual = signups > 0 ? Math.round((qualified / signups) * 100) : 0;
+  return {
+    code, email: owner.email, founder_number: owner.founder_number || null,
+    clicks, signups, qualified, days_earned: daysEarned,
+    conv_click_signup: convClickSignup, conv_signup_qualified: convSignupQual,
+    referral_url: (process.env.PUBLIC_BASE_URL || 'https://seatx.space') + '/?ref=' + code,
+  };
+}
+
+// Shared shell for the standalone SSR pages (partner + admin). Dark + lime, RTL,
+// self-contained (no SPA assets). `inner` is trusted HTML built by the caller.
+function pageShell(title: string, inner: string): string {
+  return `<!doctype html><html lang="ar" dir="rtl"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="robots" content="noindex,nofollow"/>
+<title>${escapeHtml(title)}</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#0a0e14;--surf:#111722;--surf2:#0d1119;--border:#1e2836;--lime:#a3e635;--txt:#e6e9ef;--txt2:#9aa4b2;--mono:'SFMono-Regular',ui-monospace,Menlo,monospace;--orange:#fb923c}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font-family:'Tajawal',system-ui,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased}
+a{color:var(--lime)}
+.wrap{max-width:760px;margin:0 auto;padding:24px 18px 56px}
+.brand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:17px;letter-spacing:.5px;margin-bottom:22px}
+.brand .x{background:var(--lime);color:#0a0e14;border-radius:6px;padding:0 6px}
+.hcard{background:linear-gradient(180deg,var(--surf),var(--surf2));border:1px solid var(--border);border-radius:20px;padding:22px 20px;margin-bottom:14px}
+.eyebrow{color:var(--txt2);font-size:13px;font-weight:600;margin-bottom:6px}
+.big{font-size:48px;font-weight:800;line-height:1;color:var(--lime);font-family:var(--mono)}
+.big small{font-size:16px;color:var(--txt2);font-weight:600;margin-inline-start:8px;font-family:'Tajawal'}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
+.stat{background:var(--surf);border:1px solid var(--border);border-radius:14px;padding:14px 12px;text-align:center}
+.stat .n{font-size:26px;font-weight:800;font-family:var(--mono);color:#fff}
+.stat .l{font-size:12.5px;color:var(--txt2);margin-top:4px}
+.funnel{display:flex;flex-direction:column;gap:8px;margin:12px 0}
+.frow{display:flex;align-items:center;justify-content:space-between;background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:12px 14px}
+.frow .fl{font-size:14px;color:var(--txt)}
+.frow .fn{font-size:20px;font-weight:800;font-family:var(--mono);color:var(--lime)}
+.linkbox{display:flex;gap:8px;margin-top:10px}
+.linkbox input{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:11px;color:#fff;padding:12px;font-size:13px;direction:ltr;text-align:left;font-family:var(--mono)}
+.btn{background:var(--lime);color:#0a0e14;border:none;border-radius:11px;padding:12px 18px;font-weight:800;font-size:14px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;font-family:'Tajawal'}
+.btn.ghost{background:transparent;color:var(--lime);border:1px solid var(--border)}
+.note{background:rgba(163,230,53,.06);border:1px solid rgba(163,230,53,.22);border-radius:14px;padding:16px 18px;margin-top:14px;font-size:14px;color:#d6dbe4}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+th,td{text-align:right;padding:9px 8px;border-bottom:1px solid var(--border)}
+th{color:var(--txt2);font-weight:600;font-size:12px}
+td{color:var(--txt)}
+.mut{color:var(--txt2)}
+.pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-family:var(--mono);border:1px solid var(--border)}
+.pill.pro{color:var(--lime);border-color:rgba(163,230,53,.4)}
+.pill.life{color:#c084fc;border-color:rgba(192,132,252,.4)}
+h2{font-size:16px;margin:26px 0 6px}
+.sub{color:var(--txt2);font-size:13.5px;margin-bottom:14px}
+</style></head><body><div class="wrap">${inner}</div></body></html>`;
+}
+
+// The ambassador (partner) dashboard body.
+function renderPartnerPage(f: any | null, code: string): string {
+  const brand = `<div class="brand">SEAT<span class="x">X</span><span style="color:var(--txt2);font-weight:600;font-size:14px">· لوحة الشريك</span></div>`;
+  if (!f) {
+    return pageShell('لوحة الشريك — SeatX', brand + `
+      <div class="hcard">
+        <div class="eyebrow">ما لقينا هذا الرابط</div>
+        <p class="mut" style="margin:6px 0 0">الكود <b style="font-family:var(--mono);color:#fff">${escapeHtml(code || '—')}</b> غير موجود بعد. سجّل في SeatX أول، بيوصلك رابط دعوتك ولوحتك تشتغل تلقائيًا.</p>
+        <div class="linkbox"><a class="btn" href="/">افتح SeatX</a></div>
+      </div>`);
+  }
+  const conv = f.conv_signup_qualified;
+  const inner = brand + `
+    <div class="hcard">
+      <div class="eyebrow">رصيدك — الأيام اللي كسبتها بالدعوات</div>
+      <div class="big">${f.days_earned}<small>يوم Pro</small></div>
+      <p class="mut" style="margin:10px 0 0;font-size:13.5px">كل شخص تدعوه ويشغّل أول متابعة = <b style="color:var(--lime)">+1 يوم لك</b> و+1 له. السرعة عملتك.</p>
+    </div>
+
+    <h2>رحلة كل شخص دعوته</h2>
+    <div class="funnel">
+      <div class="frow"><span class="fl">👆 ضغطوا الرابط</span><span class="fn">${f.clicks}</span></div>
+      <div class="frow"><span class="fl">✍️ سجّلوا في SeatX</span><span class="fn">${f.signups}</span></div>
+      <div class="frow"><span class="fl">⚡ فعّلوا أول متابعة (مؤهّلين)</span><span class="fn">${f.qualified}</span></div>
+    </div>
+    <div class="grid">
+      <div class="stat"><div class="n">${f.qualified}</div><div class="l">دعوات مؤهّلة</div></div>
+      <div class="stat"><div class="n">${f.days_earned}</div><div class="l">أيام كسبتها</div></div>
+      <div class="stat"><div class="n">${conv}%</div><div class="l">تحويل التسجيل → تفعيل</div></div>
+    </div>
+
+    <h2>رابط دعوتك</h2>
+    <div class="linkbox">
+      <input id="refurl" readonly value="${escapeHtml(f.referral_url)}"/>
+      <button class="btn" id="copybtn">نسخ</button>
+    </div>
+    <div class="linkbox">
+      <a class="btn ghost" style="flex:1" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent('جرّب SeatX — ما تفوّت تذكرة إذا رجعت 🎟️ ' + f.referral_url)}">مشاركة على واتساب</a>
+    </div>
+
+    <div class="note">
+      <b>ليش هذا مهم؟</b> إنت مو بس تشارك رابط — إنت تبني سوق التذاكر العادل في السعودية. كل متابعة تشتغل عن طريقك، شخص ما فوّت تذكرته. ورصيدك يكبر معهم.
+    </div>
+    <script>
+      (function(){
+        var b=document.getElementById('copybtn'), i=document.getElementById('refurl');
+        if(b&&i) b.addEventListener('click', function(){
+          try{ navigator.clipboard.writeText(i.value); }catch(e){ i.select(); try{document.execCommand('copy');}catch(_){}}
+          b.textContent='تم ✅'; setTimeout(function(){ b.textContent='نسخ'; }, 1500);
+        });
+      })();
+    </script>`;
+  return pageShell('لوحة الشريك — SeatX', inner);
+}
+
+// The admin ops dashboard body — read-only sensitive view. All links keep the
+// key in the query so navigation stays authenticated within the page.
+async function renderAdminPage(token: string): Promise<string> {
+  const k = encodeURIComponent(token);
+  const one = async (sql: string, params: any[] = []) => {
+    try { const r = await pool.query(sql, params); return r.rows; } catch { return []; }
+  };
+  const usersC = (await one('SELECT COUNT(*)::int c FROM accounts'))[0]?.c || 0;
+  const foundersC = (await one('SELECT COUNT(*)::int c FROM accounts WHERE founder_number IS NOT NULL AND founder_number<=$1', [FOUNDER_PRO_CAP]))[0]?.c || 0;
+  const lifeC = (await one(`SELECT COUNT(*)::int c FROM accounts WHERE plan='lifetime'`))[0]?.c || 0;
+  const activeWatch = (await one(`SELECT COUNT(*)::int c FROM subscriptions WHERE monitoring_status='active'`))[0]?.c || 0;
+  const eventsC = (await one('SELECT COUNT(*)::int c FROM events'))[0]?.c || 0;
+  const refSignups = (await one('SELECT COUNT(*)::int c FROM referral_events'))[0]?.c || 0;
+  const refQual = (await one(`SELECT COUNT(*)::int c FROM referral_events WHERE status IN ('qualified','rewarded')`))[0]?.c || 0;
+  const daysAwarded = (await one('SELECT COALESCE(SUM(referral_days_earned),0)::int c FROM accounts'))[0]?.c || 0;
+  const signups = await one('SELECT email, founder_number, plan, pro_until, referral_code, referral_clicks, referral_days_earned, created_at FROM accounts ORDER BY id DESC LIMIT 25');
+  const events = await one('SELECT id, title, status, watchers_count, created_at FROM events ORDER BY id DESC LIMIT 12');
+
+  const now = Date.now();
+  const stat = (n: any, l: string) => `<div class="stat"><div class="n">${n}</div><div class="l">${l}</div></div>`;
+  const grid = `<div class="grid" style="grid-template-columns:repeat(3,1fr)">
+    ${stat(usersC, 'مستخدمين')}
+    ${stat(foundersC + ' / ' + FOUNDER_PRO_CAP, 'مؤسسون (٩$)')}
+    ${stat(lifeC + ' / ' + LIFETIME_CAP, 'Lifetime (١٩٩$)')}
+    ${stat(activeWatch, 'متابعات نشطة')}
+    ${stat(eventsC, 'أحداث')}
+    ${stat(daysAwarded, 'أيام مُنِحت (إحالات)')}
+  </div>`;
+
+  const signupRows = signups.map((s: any) => {
+    const du = s.pro_until ? Math.max(0, Math.ceil((new Date(s.pro_until).getTime() - now) / 86_400_000)) : 0;
+    const planPill = s.plan === 'lifetime' ? '<span class="pill life">lifetime</span>'
+      : s.plan === 'pro' ? '<span class="pill pro">pro</span>'
+      : '<span class="pill">' + escapeHtml(s.plan || '—') + '</span>';
+    const partnerLink = s.referral_code ? `<a href="/partner?code=${encodeURIComponent(s.referral_code)}" target="_blank">لوحة</a>` : '—';
+    return `<tr>
+      <td>#${s.founder_number ?? '—'}</td>
+      <td class="mut">${escapeHtml(s.email)}</td>
+      <td>${planPill}</td>
+      <td>${du}ي</td>
+      <td class="mut" style="font-family:var(--mono)">${escapeHtml(s.referral_code || '—')}</td>
+      <td>${s.referral_clicks || 0}👆 · ${s.referral_days_earned || 0}⚡</td>
+      <td>${partnerLink}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="7" class="mut">لا يوجد مستخدمون بعد.</td></tr>';
+
+  const eventRows = events.map((e: any) => `<tr>
+      <td>${e.id}</td><td>${escapeHtml((e.title || '').slice(0, 46))}</td>
+      <td class="mut">${escapeHtml(e.status || '—')}</td><td>${e.watchers_count || 0}👥</td>
+    </tr>`).join('') || '<tr><td colspan="4" class="mut">لا أحداث.</td></tr>';
+
+  const inner = `<div class="brand">SEAT<span class="x">X</span><span style="color:var(--txt2);font-weight:600;font-size:14px">· الأدمن</span></div>
+    <p class="sub">لوحة تشغيل — للاطلاع فقط. الأرقام لحظية من قاعدة البيانات.</p>
+    ${grid}
+    <h2>الإحالات</h2>
+    <div class="grid" style="grid-template-columns:repeat(3,1fr)">
+      ${stat(refSignups, 'تسجيلات عبر روابط')}
+      ${stat(refQual, 'مؤهّلة (فعّلت متابعة)')}
+      ${stat(daysAwarded, 'أيام مُنِحت')}
+    </div>
+    <h2>آخر التسجيلات</h2>
+    <table><thead><tr><th>#</th><th>الإيميل</th><th>الخطة</th><th>باقي</th><th>الكود</th><th>الإحالات</th><th>الشريك</th></tr></thead>
+    <tbody>${signupRows}</tbody></table>
+    <h2>آخر الأحداث</h2>
+    <table><thead><tr><th>id</th><th>العنوان</th><th>الحالة</th><th>متابعون</th></tr></thead>
+    <tbody>${eventRows}</tbody></table>`;
+  return pageShell('SeatX Admin', inner);
 }
 
 // Create (or fetch) the account for an email. Idempotent: returns the same
@@ -3076,6 +3335,88 @@ app.get('/api/account', async (req: Request, res: Response) => {
     res.json({ success: true, account: { ...accountView(r.rows[0]), referrals_qualified: qualified } });
   } catch (e: any) {
     res.status(500).json({ error: 'server_error', message: e.message });
+  }
+});
+
+// Public launch counters — feeds the live founder-scarcity badge on the pricing
+// card. Only aggregate counts, no PII. Cheap; polled at most once per page load.
+app.get('/api/stats', async (_req: Request, res: Response) => {
+  try {
+    const foundersQ = await pool.query('SELECT COUNT(*)::int c FROM accounts WHERE founder_number IS NOT NULL AND founder_number <= $1', [FOUNDER_PRO_CAP]).catch(() => ({ rows: [{ c: 0 }] }));
+    const lifeQ = await pool.query(`SELECT COUNT(*)::int c FROM accounts WHERE plan='lifetime'`).catch(() => ({ rows: [{ c: 0 }] }));
+    const usersQ = await pool.query('SELECT COUNT(*)::int c FROM accounts').catch(() => ({ rows: [{ c: 0 }] }));
+    const foundersJoined = foundersQ.rows[0]?.c || 0;
+    const lifetimeJoined = lifeQ.rows[0]?.c || 0;
+    res.set('Cache-Control', 'public, max-age=30');
+    res.json({
+      founders_joined: foundersJoined,
+      founder_cap: FOUNDER_PRO_CAP,
+      founder_remaining: Math.max(0, FOUNDER_PRO_CAP - foundersJoined),
+      lifetime_joined: lifetimeJoined,
+      lifetime_cap: LIFETIME_CAP,
+      lifetime_remaining: Math.max(0, LIFETIME_CAP - lifetimeJoined),
+      total_users: usersQ.rows[0]?.c || 0,
+    });
+  } catch (e: any) {
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// Ambassador funnel — top of funnel. Fired as a beacon when someone lands with
+// ?ref=CODE. Increments that code owner's click counter. Rate-limited per IP so
+// a single visitor refreshing can't inflate it much; best-effort.
+app.post('/api/ref-hit', async (req: Request, res: Response) => {
+  try {
+    const { code } = req.body || {};
+    if (typeof code !== 'string' || !/^SX[A-Z2-9]{5}$/.test(code)) {
+      return res.status(400).json({ error: 'invalid_code' });
+    }
+    // One counted hit per (IP, code) per 10 min — dampens refresh inflation.
+    if (!rateLimit('refhit:' + getIP(req) + ':' + code, 1, 600_000)) {
+      return res.json({ success: true, counted: false });
+    }
+    await pool.query('UPDATE accounts SET referral_clicks = COALESCE(referral_clicks,0) + 1 WHERE referral_code=$1', [code]).catch(() => {});
+    res.json({ success: true, counted: true });
+  } catch (e: any) {
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// Ambassador dashboard — SSR so a partner can open a shareable link and see real
+// numbers instantly, no JS required. Keyed by ?code= (their public invite code)
+// or ?email=. Shows the funnel + days earned + invite link + share.
+app.get('/partner', async (req: Request, res: Response) => {
+  try {
+    let code = String(req.query.code || '').toUpperCase();
+    const email = String(req.query.email || '');
+    if (!/^SX[A-Z2-9]{5}$/.test(code) && isValidEmail(email)) {
+      const r = await pool.query('SELECT referral_code FROM accounts WHERE email=$1', [email]).catch(() => ({ rows: [] as any[] }));
+      code = r.rows[0]?.referral_code || '';
+    }
+    const f = /^SX[A-Z2-9]{5}$/.test(code) ? await partnerFunnel(code) : null;
+    res.set('X-Robots-Tag', 'noindex, nofollow');
+    res.type('html').send(renderPartnerPage(f, code));
+  } catch (e: any) {
+    res.status(500).type('html').send('<p>خطأ مؤقت. حاول لاحقًا.</p>');
+  }
+});
+
+// Admin dashboard — sensitive read-only ops view. Gated by ADMIN_TOKEN env; if
+// the token is unset or wrong, returns 404 (never hint the page exists). noindex.
+app.get('/admin', async (req: Request, res: Response) => {
+  const token = process.env.ADMIN_TOKEN || '';
+  const given = String(req.query.key || req.get('x-admin-token') || '');
+  // Constant-ish comparison; 404 (not 401) so the route is indistinguishable
+  // from a non-existent one to anyone without the token.
+  if (!token || given.length !== token.length || !timingSafeEqualStr(given, token)) {
+    return res.status(404).type('html').send('<h1>404</h1>');
+  }
+  try {
+    res.set('X-Robots-Tag', 'noindex, nofollow');
+    res.set('Cache-Control', 'no-store');
+    res.type('html').send(await renderAdminPage(token));
+  } catch (e: any) {
+    res.status(500).type('html').send('<p>admin error: ' + escapeHtml(e.message) + '</p>');
   }
 });
 

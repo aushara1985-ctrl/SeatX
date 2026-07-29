@@ -155,6 +155,7 @@ export async function setupDB(): Promise<void> {
       referred_by TEXT,                     -- referral_code of the inviter
       first_watch_at TIMESTAMPTZ,           -- referral qualifies on first real watch
       referral_days_earned INTEGER DEFAULT 0,
+      referral_clicks INTEGER DEFAULT 0,    -- top of the ambassador funnel (link taps)
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS idx_acc_refcode ON accounts(referral_code);
@@ -371,6 +372,16 @@ export async function setupDB(): Promise<void> {
     // unique index the ON CONFLICT target needs. Idempotent.
     `DELETE FROM subscriptions a USING subscriptions b WHERE a.id > b.id AND a.event_id = b.event_id AND a.email = b.email`,
     `CREATE UNIQUE INDEX IF NOT EXISTS subscriptions_event_email_uniq ON subscriptions(event_id, email)`,
+    // Ambassador-funnel click counter on the existing prod accounts table.
+    `ALTER TABLE accounts ADD COLUMN IF NOT EXISTS referral_clicks INTEGER DEFAULT 0`,
+    // One-time cleanup of QA/greploop test rows. Pattern-matched to test data
+    // only — cannot touch a real signup or a real allowlisted event. Idempotent
+    // (matches nothing once cleaned). The prod DB is internal-only, so this runs
+    // from inside the app on boot rather than from a local script.
+    `DELETE FROM subscriptions WHERE email LIKE '%seatxqa.dev' OR email='probe@x.com'`,
+    `DELETE FROM referral_events WHERE referred_email LIKE '%seatxqa.dev'`,
+    `DELETE FROM accounts WHERE email LIKE '%seatxqa.dev' OR email='probe@x.com'`,
+    `DELETE FROM events WHERE title LIKE 'QA %' OR event_url LIKE '%qa-referral%' OR event_url LIKE '%qa-probe%' OR event_url LIKE '%qa-ref-qualify%' OR event_url LIKE '%qa-idem%' OR title LIKE '%greploop%' OR event_url LIKE '%greploop%'`,
   ];
 
   for (const m of migrations) {
