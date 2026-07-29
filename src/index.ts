@@ -2576,9 +2576,12 @@ async function loadAccountCard(email) {
       + '</div>'
       + '<div style="display:flex;gap:8px;margin-top:8px">'
       +   '<a class="pc-btn" style="flex:1;text-decoration:none;text-align:center;padding:11px" href="https://wa.me/?text=' + encodeURIComponent('جرّب SeatX — ما تفوّت تذكرة إذا رجعت: ' + acc.referral_url) + '" target="_blank" rel="noopener">مشاركة واتساب</a>'
-      +   (acc.partner_url ? '<a class="pc-btn" style="flex:1;text-decoration:none;text-align:center;padding:11px;background:transparent;border:1px solid var(--border);color:var(--lime)" href="' + escapeHtmlClient(acc.partner_url) + '" target="_blank" rel="noopener">لوحة الشريك 📊</a>' : '')
       + '</div>'
-      + '<div style="margin-top:10px;font-size:12px;color:var(--muted2);font-family:var(--mono)">دعوات مؤهّلة: ' + qualified + ' · أيام كسبتها: ' + earned + '</div>';
+      + '<div style="margin-top:10px;font-size:12px;color:var(--muted2);font-family:var(--mono)">دعوات مؤهّلة: ' + qualified + ' · أيام كسبتها: ' + earned + '</div>'
+      + (acc.partner_url ? '<a href="' + escapeHtmlClient(acc.partner_url) + '" target="_blank" rel="noopener" style="display:block;margin-top:14px;padding:13px 14px;border-radius:12px;text-decoration:none;background:rgba(163,230,53,.07);border:1px solid rgba(163,230,53,.28)">'
+          + '<div style="color:var(--lime);font-weight:800;font-size:14px">💰 تبي تكسب فلوس؟ صِر شريك SeatX</div>'
+          + '<div style="color:var(--muted2);font-size:12.5px;margin-top:3px">10% من كل اشتراك عن طريقك — يستمر طول ما هو مشترك. افتح محفظة الشريك ←</div>'
+          + '</a>' : '');
   }
 }
 
@@ -3062,26 +3065,58 @@ function accountView(row: any): Record<string, unknown> {
   };
 }
 
-// One place that computes an ambassador's funnel from a referral code:
-//   clicks (link taps) -> signups (accounts created via the link)
-//   -> qualified (activated first watch) ; plus days earned + conversion.
-// Returns null if the code doesn't belong to a real account.
-async function partnerFunnel(code: string): Promise<any | null> {
+// PARTNER (affiliate) program economics. A partner earns a % of the subscription
+// value of everyone who becomes a PAYING subscriber via their link, recurring
+// while that subscriber stays. Distinct from the customer +1-day referral perk.
+const PARTNER_RATE = parseFloat(process.env.PARTNER_RATE || '0.10');  // 10%
+const PLAN_PRICE_USD: Record<string, number> = { pro: 9, lifetime: 199 }; // founder-era $; refine when payments store the real charge
+
+// Mask an email for a semi-public (shareable) page: keep first 2 chars + domain.
+function maskEmail(e: string): string {
+  const s = String(e || '');
+  const at = s.indexOf('@');
+  if (at < 1) return '***';
+  const local = s.slice(0, at); const domain = s.slice(at);
+  const head = local.slice(0, 2);
+  return head + '***' + domain;
+}
+
+// Compute a partner's earnings wallet from their referral code:
+//   clicks -> signups -> PAID subscribers (referred accounts on a paid plan),
+//   with commission = PARTNER_RATE of each paid subscription value. Returns null
+//   if the code isn't a real account. Earnings are $0 until payments go live —
+//   the structure is what recruits partners; the numbers fill in later.
+async function partnerWallet(code: string): Promise<any | null> {
   const acc = await pool.query('SELECT * FROM accounts WHERE referral_code=$1', [code]).catch(() => ({ rows: [] as any[] }));
   const owner = acc.rows[0];
   if (!owner) return null;
   const signupsQ = await pool.query('SELECT COUNT(*)::int c FROM referral_events WHERE referrer_code=$1', [code]).catch(() => ({ rows: [{ c: 0 }] }));
-  const qualQ = await pool.query(`SELECT COUNT(*)::int c FROM referral_events WHERE referrer_code=$1 AND status IN ('qualified','rewarded')`, [code]).catch(() => ({ rows: [{ c: 0 }] }));
   const clicks = owner.referral_clicks || 0;
   const signups = signupsQ.rows[0]?.c || 0;
-  const qualified = qualQ.rows[0]?.c || 0;
-  const daysEarned = owner.referral_days_earned || 0;
-  const convClickSignup = clicks > 0 ? Math.round((signups / clicks) * 100) : 0;
-  const convSignupQual = signups > 0 ? Math.round((qualified / signups) * 100) : 0;
+  // Everyone referred by this code, newest first — for the ledger table.
+  const referred = (await pool.query(
+    `SELECT email, plan, created_at FROM accounts WHERE referred_by=$1 ORDER BY id DESC LIMIT 30`, [code]
+  ).catch(() => ({ rows: [] as any[] }))).rows;
+  let proSubs = 0, lifeSubs = 0;
+  const ledger = referred.map((r: any) => {
+    const paid = r.plan === 'pro' || r.plan === 'lifetime';
+    if (r.plan === 'pro') proSubs++;
+    if (r.plan === 'lifetime') lifeSubs++;
+    const price = PLAN_PRICE_USD[r.plan] || 0;
+    const commission = +(price * PARTNER_RATE).toFixed(2);
+    return { email: maskEmail(r.email), plan: r.plan, paid, commission };
+  });
+  const activePaid = proSubs + lifeSubs;
+  const monthlyRecurring = +(proSubs * PLAN_PRICE_USD.pro * PARTNER_RATE).toFixed(2);
+  const oneTime = +(lifeSubs * PLAN_PRICE_USD.lifetime * PARTNER_RATE).toFixed(2);
+  const totalEarned = +(monthlyRecurring + oneTime).toFixed(2);
+  const convSignupPaid = signups > 0 ? Math.round((activePaid / signups) * 100) : 0;
   return {
-    code, email: owner.email, founder_number: owner.founder_number || null,
-    clicks, signups, qualified, days_earned: daysEarned,
-    conv_click_signup: convClickSignup, conv_signup_qualified: convSignupQual,
+    code, email: owner.email, clicks, signups, active_paid: activePaid,
+    pro_subs: proSubs, life_subs: lifeSubs,
+    monthly_recurring: monthlyRecurring, one_time: oneTime, total_earned: totalEarned,
+    conv_signup_paid: convSignupPaid, rate_pct: Math.round(PARTNER_RATE * 100),
+    ledger,
     referral_url: (process.env.PUBLIC_BASE_URL || 'https://seatx.space') + '/?ref=' + code,
   };
 }
@@ -3132,48 +3167,62 @@ h2{font-size:16px;margin:26px 0 6px}
 </style></head><body><div class="wrap">${inner}</div></body></html>`;
 }
 
-// The ambassador (partner) dashboard body.
-function renderPartnerPage(f: any | null, code: string): string {
-  const brand = `<div class="brand">SEAT<span class="x">X</span><span style="color:var(--txt2);font-weight:600;font-size:14px">· لوحة الشريك</span></div>`;
-  if (!f) {
-    return pageShell('لوحة الشريك — SeatX', brand + `
+// The PARTNER (affiliate) earnings dashboard — a real wallet: how many signed
+// up, how many became paying subscribers, and the commission earned. Doubles as
+// the recruitment showcase (the program pitch lives at the bottom).
+function renderPartnerPage(w: any | null, code: string): string {
+  const brand = `<div class="brand">SEAT<span class="x">X</span><span style="color:var(--txt2);font-weight:600;font-size:14px">· محفظة الشريك</span></div>`;
+  if (!w) {
+    return pageShell('محفظة الشريك — SeatX', brand + `
       <div class="hcard">
         <div class="eyebrow">ما لقينا هذا الرابط</div>
-        <p class="mut" style="margin:6px 0 0">الكود <b style="font-family:var(--mono);color:#fff">${escapeHtml(code || '—')}</b> غير موجود بعد. سجّل في SeatX أول، بيوصلك رابط دعوتك ولوحتك تشتغل تلقائيًا.</p>
+        <p class="mut" style="margin:6px 0 0">الكود <b style="font-family:var(--mono);color:#fff">${escapeHtml(code || '—')}</b> غير موجود بعد. سجّل في SeatX أول، بيوصلك رابط شريك ولوحتك تشتغل تلقائيًا.</p>
         <div class="linkbox"><a class="btn" href="/">افتح SeatX</a></div>
       </div>`);
   }
-  const conv = f.conv_signup_qualified;
+  const money = (n: number) => '$' + Number(n || 0).toFixed(2);
+  const ledgerRows = (w.ledger || []).map((r: any) => {
+    const status = r.plan === 'pro' ? '<span class="pill pro">مشترك Pro</span>'
+      : r.plan === 'lifetime' ? '<span class="pill life">Lifetime</span>'
+      : '<span class="pill">سجّل فقط</span>';
+    return `<tr><td class="mut">${escapeHtml(r.email)}</td><td>${status}</td><td style="font-family:var(--mono);color:${r.paid ? 'var(--lime)' : 'var(--txt2)'}">${r.paid ? money(r.commission) : '—'}</td></tr>`;
+  }).join('') || `<tr><td colspan="3" class="mut" style="padding:16px 8px">لسه ما فيه أحد سجّل عن طريقك — شارك رابطك تحت وابدأ رحلتك.</td></tr>`;
+
   const inner = brand + `
     <div class="hcard">
-      <div class="eyebrow">رصيدك — الأيام اللي كسبتها بالدعوات</div>
-      <div class="big">${f.days_earned}<small>يوم Pro</small></div>
-      <p class="mut" style="margin:10px 0 0;font-size:13.5px">كل شخص تدعوه ويشغّل أول متابعة = <b style="color:var(--lime)">+1 يوم لك</b> و+1 له. السرعة عملتك.</p>
+      <div class="eyebrow">محفظتك — أرباحك من برنامج الشركاء</div>
+      <div class="big">${money(w.total_earned)}<small>إجمالي</small></div>
+      <p class="mut" style="margin:10px 0 0;font-size:13.5px">تكسب <b style="color:var(--lime)">${w.rate_pct}%</b> من قيمة كل اشتراك يجي عن طريقك — <b style="color:var(--lime)">ويستمر طول ما هو مشترك</b>. 💚</p>
+    </div>
+    <div class="grid">
+      <div class="stat"><div class="n">${w.active_paid}</div><div class="l">مشتركين دافعين</div></div>
+      <div class="stat"><div class="n">${money(w.monthly_recurring)}</div><div class="l">دخل شهري متكرر</div></div>
+      <div class="stat"><div class="n">${w.conv_signup_paid}%</div><div class="l">تحويل تسجيل → اشتراك</div></div>
     </div>
 
     <h2>رحلة كل شخص دعوته</h2>
     <div class="funnel">
-      <div class="frow"><span class="fl">👆 ضغطوا الرابط</span><span class="fn">${f.clicks}</span></div>
-      <div class="frow"><span class="fl">✍️ سجّلوا في SeatX</span><span class="fn">${f.signups}</span></div>
-      <div class="frow"><span class="fl">⚡ فعّلوا أول متابعة (مؤهّلين)</span><span class="fn">${f.qualified}</span></div>
-    </div>
-    <div class="grid">
-      <div class="stat"><div class="n">${f.qualified}</div><div class="l">دعوات مؤهّلة</div></div>
-      <div class="stat"><div class="n">${f.days_earned}</div><div class="l">أيام كسبتها</div></div>
-      <div class="stat"><div class="n">${conv}%</div><div class="l">تحويل التسجيل → تفعيل</div></div>
+      <div class="frow"><span class="fl">👆 ضغطوا الرابط</span><span class="fn">${w.clicks}</span></div>
+      <div class="frow"><span class="fl">✍️ سجّلوا في SeatX</span><span class="fn">${w.signups}</span></div>
+      <div class="frow"><span class="fl">💳 اشتركوا فعليًا (دافعين)</span><span class="fn">${w.active_paid}</span></div>
     </div>
 
-    <h2>رابط دعوتك</h2>
+    <h2>كشف الإحالات</h2>
+    <table><thead><tr><th>العميل</th><th>الحالة</th><th>عمولتك</th></tr></thead><tbody>${ledgerRows}</tbody></table>
+
+    <h2>رابط الشريك</h2>
     <div class="linkbox">
-      <input id="refurl" readonly value="${escapeHtml(f.referral_url)}"/>
+      <input id="refurl" readonly value="${escapeHtml(w.referral_url)}"/>
       <button class="btn" id="copybtn">نسخ</button>
     </div>
     <div class="linkbox">
-      <a class="btn ghost" style="flex:1" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent('جرّب SeatX — ما تفوّت تذكرة إذا رجعت 🎟️ ' + f.referral_url)}">مشاركة على واتساب</a>
+      <a class="btn ghost" style="flex:1" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent('جرّب SeatX — ما تفوّت تذكرة إذا رجعت 🎟️ ' + w.referral_url)}">مشاركة على واتساب</a>
     </div>
 
     <div class="note">
-      <b>ليش هذا مهم؟</b> إنت مو بس تشارك رابط — إنت تبني سوق التذاكر العادل في السعودية. كل متابعة تشتغل عن طريقك، شخص ما فوّت تذكرته. ورصيدك يكبر معهم.
+      <b>برنامج شركاء SeatX 🚀</b><br>
+      انزل محتوى مرة واحدة، ويتحوّل إلى أصل يجيب لك دخل مع الوقت. إذا أحد اشترك عن طريق رابطك تاخذ <b style="color:var(--lime)">${w.rate_pct}% من قيمة اشتراكه</b>، وطالما هو مستمر — دخلك مستمر. مو مطلوب منك تكون مندوب مبيعات، ولا تضغط على أحد. إذا المنتج عجبك شاركه بطريقتك، والباقي علينا.<br><br>
+      إحنا ما ندوّر مسوّقين — ندوّر <b>أوائل الشركاء</b> اللي يبنون SeatX معنا من البداية. ابدأ اليوم، ويمكن بعد سنة تشكر نفسك إنك بدأت بدري. 💚
     </div>
     <script>
       (function(){
@@ -3184,7 +3233,7 @@ function renderPartnerPage(f: any | null, code: string): string {
         });
       })();
     </script>`;
-  return pageShell('لوحة الشريك — SeatX', inner);
+  return pageShell('محفظة الشريك — SeatX', inner);
 }
 
 // The admin ops dashboard body — read-only sensitive view. All links keep the
@@ -3393,7 +3442,7 @@ app.get('/partner', async (req: Request, res: Response) => {
       const r = await pool.query('SELECT referral_code FROM accounts WHERE email=$1', [email]).catch(() => ({ rows: [] as any[] }));
       code = r.rows[0]?.referral_code || '';
     }
-    const f = /^SX[A-Z2-9]{5}$/.test(code) ? await partnerFunnel(code) : null;
+    const f = /^SX[A-Z2-9]{5}$/.test(code) ? await partnerWallet(code) : null;
     res.set('X-Robots-Tag', 'noindex, nofollow');
     res.type('html').send(renderPartnerPage(f, code));
   } catch (e: any) {
