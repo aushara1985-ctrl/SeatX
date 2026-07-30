@@ -23,6 +23,9 @@ app.use((req, res, next) => {
   next();
 });
 
+// Static assets (PWA icons, favicon) from public/. Long cache — filenames are stable.
+app.use(express.static('public', { maxAge: '30d' }));
+
 // FanX by SeatX — World Cup 2026 decision radar. Strictly env-gated. When
 // FANX_ENABLED is not 'true', the router is not mounted and the module tree
 // is not loaded — zero effect on SeatX. All FanX routes live under /fanx/*.
@@ -287,6 +290,15 @@ function getHTML(events: any[], feed: any[], alerts24h: number = 0): string {
 <meta name="description" lang="en" content="Real-time demand intelligence for Saudi sports, concerts, and events. Know the second seats return — before everyone else."/>
 <link rel="canonical" href="${SITE_URL}/"/>
 <meta name="robots" content="index,follow,max-image-preview:large"/>
+<link rel="manifest" href="/manifest.webmanifest"/>
+<meta name="theme-color" content="#0a0e14"/>
+<link rel="icon" href="/favicon.ico" sizes="any"/>
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png"/>
+<link rel="apple-touch-icon" href="/apple-touch-icon.png"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="SeatX"/>
 <meta property="og:type" content="website"/>
 <meta property="og:site_name" content="SeatX"/>
 <meta property="og:title" content="SeatX — السوق المباشر لتذاكر السعودية"/>
@@ -505,6 +517,11 @@ h1 em{color:var(--lime);font-style:normal;display:block}
 .qh-or{font-size:11px;color:var(--muted2);margin-top:6px;text-align:center}
 .qh-demo{background:none;border:none;color:var(--muted3);font-size:11px;cursor:pointer;text-decoration:underline;font-family:inherit}
 .qh-demo:hover{color:var(--lime)}
+#install-bar{display:none;align-items:center;gap:8px;justify-content:center;position:sticky;top:0;z-index:250;background:linear-gradient(90deg,#a3e635,#84cc16);color:#0a0e14;padding:10px 12px;font-weight:700;font-size:13.5px;box-shadow:0 2px 12px rgba(0,0,0,.35)}
+#install-bar .ib-txt{flex:1;text-align:center;min-width:0;line-height:1.4}
+#install-bar .ib-cta{background:#0a0e14;color:#a3e635;border:none;border-radius:9px;padding:8px 18px;font-weight:800;font-size:13px;cursor:pointer;white-space:nowrap;font-family:inherit;flex-shrink:0}
+#install-bar .ib-x{background:transparent;border:none;color:#0a0e14;font-size:20px;line-height:1;cursor:pointer;padding:0 4px;opacity:.55;flex-shrink:0}
+@media(max-width:520px){#install-bar{font-size:12px;padding:9px 10px}#install-bar .ib-cta{padding:7px 14px}}
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:300;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);padding:16px}
 .modal-box{background:var(--bg2);border:1px solid rgba(163,230,53,.2);border-radius:20px;padding:28px;max-width:420px;width:100%;text-align:center;max-height:85vh;overflow-y:auto}
 .modal-title{font-size:20px;font-weight:800;color:#fff;margin-bottom:8px}
@@ -750,6 +767,22 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
 </head>
 <body class="ar">
 <div class="toast-container" id="tc"></div>
+
+<!-- Persistent install prompt — pushes home-screen install over browser use.
+     Shown when installable + not already installed. Android uses the captured
+     beforeinstallprompt; iOS/other shows manual steps. -->
+<div id="install-bar">
+  <span class="ib-txt">📲 ثبّت SeatX على جوالك — أسرع وتوصلك التنبيهات فورًا</span>
+  <button class="ib-cta" onclick="doInstall()" id="install-cta">تثبيت</button>
+  <button class="ib-x" onclick="dismissInstall()" aria-label="إغلاق">×</button>
+</div>
+<div id="ios-install" class="modal-overlay" style="display:none">
+  <div class="modal-box">
+    <div class="modal-title">ثبّت SeatX على جوالك 📲</div>
+    <div class="modal-sub" id="ios-steps">١) اضغط زر المشاركة ⬆️<br>٢) اختر «إضافة إلى الشاشة الرئيسية»<br>٣) اضغط «إضافة» — وبيصير عندك أيقونة SeatX</div>
+    <button class="gbtn" style="width:100%;padding:12px;font-size:14px;border-radius:10px" onclick="document.getElementById('ios-install').style.display='none'">تمام</button>
+  </div>
+</div>
 
 <nav>
   <a class="logo" href="/">
@@ -1163,6 +1196,31 @@ ${fanxOn ? `
 </nav>
 
 <script>
+// ── Install-to-home-screen (PWA) ──────────────────────────────────────────────
+// Capture the browser's install prompt as early as possible so our own
+// "تثبيت" button drives it (instead of waiting for the browser's own banner).
+var deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); deferredInstallPrompt = e; maybeShowInstall(); });
+window.addEventListener('appinstalled', function () { deferredInstallPrompt = null; var b = document.getElementById('install-bar'); if (b) b.style.display = 'none'; });
+function seatxStandalone() { try { return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true; } catch (_) { return false; } }
+function seatxIsIOS() { return /iphone|ipad|ipod/i.test(navigator.userAgent || ''); }
+function maybeShowInstall() {
+  if (seatxStandalone()) return;                              // already installed
+  try { if (sessionStorage.getItem('seatx_hide_install') === '1') return; } catch (_) {}
+  var b = document.getElementById('install-bar'); if (b) b.style.display = 'flex';
+}
+function dismissInstall() { try { sessionStorage.setItem('seatx_hide_install', '1'); } catch (_) {} var b = document.getElementById('install-bar'); if (b) b.style.display = 'none'; }
+async function doInstall() {
+  if (deferredInstallPrompt) {
+    deferredInstallPrompt.prompt();
+    try { var c = await deferredInstallPrompt.userChoice; if (c && c.outcome === 'accepted') { var b = document.getElementById('install-bar'); if (b) b.style.display = 'none'; } } catch (_) {}
+    deferredInstallPrompt = null;
+  } else {
+    // iOS (no beforeinstallprompt) or the event hasn't fired yet → manual steps.
+    var m = document.getElementById('ios-install'); if (m) m.style.display = 'flex';
+  }
+}
+
 const EVENTS = ${ej};
 const FEED = ${fj};
 const SHARE_BASE = location.origin;
@@ -2692,6 +2750,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // .active-tab), so this is a no-op on first paint but keeps state aligned.
   switchTab('home');
   initPush();
+  // Show the install bar for iOS (never fires beforeinstallprompt) and for any
+  // case where the prompt was already captured before this ran.
+  if ((seatxIsIOS() || deferredInstallPrompt) && !seatxStandalone()) maybeShowInstall();
 });
 </script>
 </body>
@@ -2852,6 +2913,26 @@ app.get('/robots.txt', (_req: Request, res: Response) => {
   res.type('text/plain').send(
     `User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api/\n\nSitemap: ${SITE_URL}/sitemap.xml\n`
   );
+});
+
+// PWA manifest — makes SeatX installable ("add to home screen", standalone,
+// app icon + name). Served dynamically so the origin matches the canonical host.
+app.get('/manifest.webmanifest', (_req: Request, res: Response) => {
+  res.type('application/manifest+json').send(JSON.stringify({
+    name: 'SeatX — تنبيهات التذاكر',
+    short_name: 'SeatX',
+    description: 'اعرف لحظة رجوع مقاعد التذاكر في السعودية قبل أي شخص.',
+    lang: 'ar', dir: 'rtl',
+    start_url: '/?src=pwa', scope: '/',
+    display: 'standalone', orientation: 'portrait',
+    background_color: '#0a0e14', theme_color: '#0a0e14',
+    categories: ['sports', 'entertainment', 'utilities'],
+    icons: [
+      { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+      { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+      { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+    ],
+  }));
 });
 
 // Plain-language description for LLMs / answer engines (GEO). Helps ChatGPT,
