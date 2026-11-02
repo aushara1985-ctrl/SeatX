@@ -366,6 +366,8 @@ export async function setupDB(): Promise<void> {
     `ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS plan_type TEXT DEFAULT 'free'`,
 `ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS monitoring_status TEXT DEFAULT 'pending'`,
 `ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS last_alert_sent_at TIMESTAMPTZ`,
+    // First visit source (utm_*/src) of the watch, so each sign-up traces back to the post that brought it.
+    `ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS utm TEXT`,
     // The UNIQUE(event_id,email) in the CREATE TABLE only applies to fresh DBs;
     // the live prod table predates it, so /api/subscribe's ON CONFLICT threw
     // "no unique or exclusion constraint matching the ON CONFLICT specification"

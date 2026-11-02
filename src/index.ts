@@ -2005,12 +2005,23 @@ async function requestEvent() {
   }
 }
 
+function visitUtm() {
+  // first visit source (utm_* or ?src=), kept for the session so the watch records which post brought it
+  try {
+    const q = new URLSearchParams(location.search);
+    const keys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content'];
+    const now = keys.map(k => q.get(k)).filter(Boolean).join('/') || q.get('src') || '';
+    if (now && !localStorage.getItem('seatx_utm')) localStorage.setItem('seatx_utm', now.slice(0, 120));
+    return localStorage.getItem('seatx_utm') || '';
+  } catch (_) { return ''; }
+}
+visitUtm();
 async function subscribe(id, btnEl) {
   const t = T[lang];
   const email = document.getElementById('em-' + id)?.value?.trim();
   if (!email || !email.includes('@')) { alert(t.invalidEmail); return; }
   try {
-    const r = await fetch('/api/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ eventId: id, email }) });
+    const r = await fetch('/api/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ eventId: id, email, utm: visitUtm() }) });
     const data = await r.json();
     if (r.status === 403 && data.upgrade) {
       // Entry tier was retired in the landing pass. Limit hit -> Pro upgrade.
@@ -2067,7 +2078,7 @@ async function submitPopupEmail() {
   if (!email || !email.includes('@')) { alert(t.invalidEmail); return; }
   if (!pendingEventId) { closeModal('email-popup'); return; }
   try {
-    await fetch('/api/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ eventId: pendingEventId, email }) });
+    await fetch('/api/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ eventId: pendingEventId, email, utm: visitUtm() }) });
     await tryEnablePush(email);
   } catch (_) { }
   closeModal('email-popup');
@@ -3053,6 +3064,7 @@ app.post('/api/subscribe', async (req: Request, res: Response) => {
       return res.status(429).json({ error: 'rate_limit', message: 'Too many requests' });
     }
     const { eventId, email } = req.body || {};
+    const utm = typeof req.body?.utm === 'string' ? req.body.utm.slice(0, 120) : null;
     const idNum = parseInt(String(eventId), 10);
     if (!Number.isFinite(idNum) || idNum <= 0) {
       return res.status(400).json({ error: 'invalid_event_id' });
@@ -3087,11 +3099,11 @@ app.post('/api/subscribe', async (req: Request, res: Response) => {
     }
 
     const ins = await pool.query(
-      `INSERT INTO subscriptions (event_id, email, monitoring_status)
-       VALUES ($1, $2, 'active')
+      `INSERT INTO subscriptions (event_id, email, monitoring_status, utm)
+       VALUES ($1, $2, 'active', $3)
        ON CONFLICT (event_id, email) DO NOTHING
        RETURNING id`,
-      [idNum, email]
+      [idNum, email, utm]
     );
     const inserted = (ins.rowCount ?? 0) > 0;
     if (inserted) {
