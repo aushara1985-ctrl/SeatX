@@ -1748,34 +1748,7 @@ function animateScoreBars() {
   }, 100);
 }
 
-let ti = 0;
-const staticToasts = {
-  en: [
-    { i: '⚡', t: 'Seats returned — UFC Riyadh', s: '2 Premium seats appeared. 847 users notified.' },
-    { i: '🔥', t: 'Al Nassr Derby — demand spike', s: '542 new users in the last 10 minutes.' },
-    { i: '🚨', t: 'Page change detected', s: 'Riyadh Season Concert — availability updated.' },
-  ],
-  ar: [
-    { i: '⚡', t: 'مقاعد UFC الرياض عادت', s: 'مقعدان بريميوم ظهرا. 847 مستخدم تم تنبيههم.' },
-    { i: '🔥', t: 'ديربي النصر — ارتفاع الطلب', s: '542 مستخدم جديد في 10 دقائق.' },
-    { i: '🚨', t: 'تغيير مرصود', s: 'حفل موسم الرياض — تحديث التوفر.' },
-  ]
-};
-function showToast() {
-  const ts = staticToasts[lang] || staticToasts.en;
-  const d = ts[ti % ts.length]; ti++;
-  const tc = document.getElementById('tc');
-  if (!tc) return;
-  const el = document.createElement('div');
-  el.className = 'toast';
-  el.style.fontFamily = lang === 'ar' ? "'IBM Plex Sans Arabic',sans-serif" : "'DM Sans',sans-serif";
-  if (lang === 'ar') el.style.direction = 'rtl';
-  el.innerHTML = \`<div class="toast-icon">\${d.i}</div><div><div class="toast-title">\${escapeHtmlClient(d.t)}</div><div class="toast-sub">\${escapeHtmlClient(d.s)}</div></div><div class="toast-bar" style="animation-duration:5000ms"></div>\`;
-  tc.appendChild(el);
-  requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('on')));
-  setTimeout(() => { el.classList.add('off'); el.classList.remove('on'); setTimeout(() => el.remove(), 400); }, 5000);
-}
-setTimeout(() => { showToast(); setInterval(showToast, 9000 + Math.random() * 2000); }, 2500);
+// No hardcoded/fake activity toasts (SeatX rule: no fake activity). Real push toasts are handled below.
 
 async function addEvent() {
   const t = T[lang];
@@ -1796,7 +1769,7 @@ async function addEvent() {
     if (!r.ok) throw new Error(data.message || 'failed');
     pendingEventId = data.id;
     showEmailPopup(data.id);
-    setTimeout(() => location.reload(), 4000);
+    setTimeout(() => { if (!document.getElementById('email-popup')) location.reload(); }, 4000);
   } catch (e) {
     alert(t.error);
     btn.textContent = orig;
@@ -1830,7 +1803,7 @@ async function quickAdd() {
     if (!r.ok) throw new Error(data.message || 'failed');
     pendingEventId = data.id;
     showEmailPopup(data.id);
-    setTimeout(() => location.reload(), 4000);
+    setTimeout(() => { if (!document.getElementById('email-popup')) location.reload(); }, 4000);
   } catch (e) {
     btn.textContent = orig;
     btn.disabled = false;
@@ -1856,7 +1829,7 @@ async function tryDemo() {
     if (!r.ok) throw new Error(data.message || 'failed');
     pendingEventId = data.id;
     showEmailPopup(data.id);
-    setTimeout(() => location.reload(), 4000);
+    setTimeout(() => { if (!document.getElementById('email-popup')) location.reload(); }, 4000);
   } catch (e) {
     if (btn) { btn.textContent = t.qhDemo; btn.disabled = false; }
     const sk = document.getElementById('sk-demo');
@@ -2065,9 +2038,9 @@ function showEmailPopup(eventId) {
     <div class="modal-sub">\${t.popupSub}</div>
     <input class="modal-input" id="popup-email" type="email" placeholder="\${t.emailPh}" autocomplete="email"/>
     <button class="gbtn" style="width:100%;padding:12px;font-size:14px;border-radius:10px" onclick="submitPopupEmail()">\${t.popupBtn}</button>
-    <button class="modal-skip" onclick="closeModal('email-popup')">\${t.popupSkip}</button>
+    <button class="modal-skip" onclick="closeModal('email-popup');location.reload()">\${t.popupSkip}</button>
   </div>\`;
-  popup.addEventListener('click', (e) => { if (e.target === popup) closeModal('email-popup'); });
+  popup.addEventListener('click', (e) => { if (e.target === popup) { closeModal('email-popup'); location.reload(); } });
   document.body.appendChild(popup);
   setTimeout(() => { document.getElementById('popup-email')?.focus(); }, 100);
 }
@@ -2079,6 +2052,8 @@ async function submitPopupEmail() {
   if (!pendingEventId) { closeModal('email-popup'); return; }
   try {
     await fetch('/api/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ eventId: pendingEventId, email, utm: visitUtm() }) });
+    try { localStorage.setItem('seatx_last_email', email); } catch (_) { }
+    await ensureAccount(email);
     await tryEnablePush(email);
   } catch (_) { }
   closeModal('email-popup');
@@ -3781,7 +3756,10 @@ app.post('/admin/partner', async (req: Request, res: Response) => {
   }
 });
 
-// Founder marks who actually PAID (manual bridge until Stripe). Setting plan to
+// ADMIN-ONLY bookkeeping tool (ADMIN_TOKEN gated, 404 otherwise). Product rule: all
+// payments go through Stripe only; money is NEVER collected outside Stripe and this
+// route must never be presented to a customer as a way to pay. It only records a
+// plan for an account whose payment was confirmed in Stripe. Setting plan to
 // pro/lifetime is the exact signal the partner wallet reads to credit the 10%
 // commission — so this closes the referral→paid→commission loop by hand. Also
 // extends pro_until so the paid user actually gets access. Same ADMIN_TOKEN gate.
