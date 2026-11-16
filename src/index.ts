@@ -514,6 +514,7 @@ h1 em{color:var(--lime);font-style:normal;display:block}
 .qh-input:focus{border-color:rgba(163,230,53,.35);background:rgba(163,230,53,.03)}
 .qh-btn{background:var(--lime);border:none;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;color:#000;cursor:pointer;white-space:nowrap;font-family:inherit}
 .qh-btn:hover{background:var(--lime2)}
+.qh-hint{font-size:11px;color:var(--muted2);margin-top:6px;text-align:center}
 .qh-or{font-size:11px;color:var(--muted2);margin-top:6px;text-align:center}
 .qh-demo{background:none;border:none;color:var(--muted3);font-size:11px;cursor:pointer;text-decoration:underline;font-family:inherit}
 .qh-demo:hover{color:var(--lime)}
@@ -815,9 +816,10 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
     <div class="qh-label" id="qhl">🔔 ألصق رابط الحدث — ننبّهك إذا رجعت المقاعد</div>
     <div class="qh-row">
       <input class="qh-input" id="qh-url" type="url" placeholder="ألصق رابط الحدث هنا" autocomplete="off"/>
-      <button class="qh-btn" id="qh-btn" onclick="quickAdd()">نبّهني إذا رجعت ←</button>
+      <button class="qh-btn" id="qh-btn" onclick="quickAdd()">نبّهني أول ما ترجع مقاعد ←</button>
     </div>
-    <div class="qh-or" id="qh-or-wrap"><span id="qh-or">أو </span><button class="qh-demo" id="qh-demo" onclick="tryDemo()">جرّب بفعالية تجريبية</button></div>
+    <div class="qh-hint" id="qh-hint">انسخ الرابط من صفحة المباراة في webook أو تكت ماستر</div>
+    <div class="qh-or" id="qh-or-wrap"><span id="qh-or">أو </span><button class="qh-demo" id="qh-demo" onclick="tryDemo()">جرّب بدون رابط</button></div>
   </div>
 </div>
 
@@ -1230,6 +1232,7 @@ const T = {
     navMyAlerts: 'Account', navStart: 'Start watching',
     qhLabel: '🔔 Paste a ticket link — we alert you if seats return',
     qhBtn: 'Notify me if seats return →',
+    qhHint: 'Copy the link from the match page on webook or Ticketmaster',
     qhOr: 'or ', qhDemo: 'try a demo event',
     qhPlaceholder: 'Paste ticket link here...',
     ep: 'Saudi seat market · Live',
@@ -1362,8 +1365,9 @@ const T = {
   ar: {
     navMyAlerts: 'حسابي', navStart: 'ابدأ المتابعة',
     qhLabel: '🔔 ألصق رابط الحدث — ننبّهك إذا رجعت المقاعد',
-    qhBtn: 'نبّهني إذا رجعت ←',
-    qhOr: 'أو ', qhDemo: 'جرّب فعالية تجريبية',
+    qhBtn: 'نبّهني أول ما ترجع مقاعد ←',
+    qhHint: 'انسخ الرابط من صفحة المباراة في webook أو تكت ماستر',
+    qhOr: 'أو ', qhDemo: 'جرّب بدون رابط',
     qhPlaceholder: 'الصق رابط التذاكر هنا...',
     ep: 'سوق المقاعد السعودي · مباشر',
     hm: 'لا تفوّت التذكرة', ha: 'إذا رجعت.',
@@ -1521,7 +1525,7 @@ function setLang(l) {
   // Desktop top-nav tabs (.ntab) — mirror tab labels
   s('ntab-home', t.tabHome); s('ntab-trending', t.tabTrending);
   s('ntab-watching', t.tabWatching); s('ntab-alerts', t.tabAlerts);
-  s('qhl', t.qhLabel); s('qh-btn', t.qhBtn); s('qh-or', t.qhOr); s('qh-demo', t.qhDemo);
+  s('qhl', t.qhLabel); s('qh-btn', t.qhBtn); s('qh-hint', t.qhHint); s('qh-or', t.qhOr); s('qh-demo', t.qhDemo);
   // Don't set qh-url placeholder here — startRotatingPlaceholder owns it so
   // it rotates through Saudi-flavored prompts (الهلال × النصر / ويبوك / موسم الرياض / UFC).
   if (typeof startRotatingPlaceholder === 'function') startRotatingPlaceholder();
