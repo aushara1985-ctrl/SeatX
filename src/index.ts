@@ -11,6 +11,22 @@ app.use(express.json({ limit: '64kb' }));
 // Canonical site origin for SEO (all canonical/og/sitemap URLs use this).
 const SITE_URL = (process.env.PUBLIC_BASE_URL || 'https://www.seatx.space').replace(/\/$/, '');
 
+// SEO/GEO: shared share-image + FAQ (rendered visibly on the landing AND emitted as FAQPage JSON-LD).
+const OG_IMAGE = SITE_URL + '/og.png';
+const SEO_FAQ: Array<[string, string]> = [
+  ['وش هو SeatX؟', 'SeatX خدمة تنبيهات فورية لتذاكر المباريات والحفلات والفعاليات في السعودية. يراقب المصادر الرسمية وينبّهك لحظة رجوع المقاعد إذا نفدت التذاكر.'],
+  ['كيف يشتغل تنبيه رجوع التذاكر؟', 'تختار الحدث وتفعّل التنبيه ببريدك أو بالإشعارات. SeatX يراقب المصادر الرسمية (مثل webook وتكت ماستر) وإذا ظهرت مقاعد متاحة يوصلك تنبيه فوري، وتكمّل الحجز بنفسك من المصدر الرسمي.'],
+  ['هل SeatX يبيع تذاكر؟', 'لا. SeatX ما يبيع ولا يعيد بيع التذاكر. يبيع السرعة والأولوية في التنبيه، والشراء يتم من المصدر الرسمي.'],
+  ['هل SeatX يتجاوز طابور الانتظار؟', 'لا. SeatX لا يتجاوز الطوابير ولا يحجز عنك. دوره إنه يخبرك بسرعة إذا رجعت مقاعد.'],
+  ['هل فيه وقت مضمون لرجوع التذاكر؟', 'لا. ما فيه وقت أو ضمان لرجوع التذاكر، لكن SeatX يراقب باستمرار وينبّهك لحظة ما يرجع شي.'],
+  ['كم سعر SeatX؟', 'فيه تجربة مجانية 7 أيام. بعدها خطة الأولوية بسعر المؤسسين 9 دولار شهريًا لأول 1000 مشترك (بعدها 19 دولار)، ووصول مدى الحياة بـ 199 دولار دفعة واحدة لأول 100.'],
+  ['كيف أبدأ؟', 'افتح seatx.space، اختر الحدث اللي تبغاه أو أضف حدثك، وفعّل التنبيه ببريدك. التجربة المجانية تبدأ تلقائيًا.'],
+];
+const faqLdBlock = () => ({
+  '@type': 'FAQPage',
+  mainEntity: SEO_FAQ.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })),
+});
+
 // Canonical-host handling for SEO. The bare apex (seatx.space) currently points
 // at a parking IP; if/when its DNS is pointed here, 301 it to www so Google sees
 // one canonical host. The railway.app domain stays reachable (for testing) but
@@ -285,9 +301,8 @@ function getHTML(events: any[], feed: any[], alerts24h: number = 0): string {
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>SeatX — السوق المباشر لتذاكر السعودية</title>
-<meta name="description" content="ذكاء سوق مباشر لتذاكر المباريات والحفلات والفعاليات في السعودية. اعرف لحظة رجوع المقاعد قبل أي شخص ثاني."/>
-<meta name="description" lang="en" content="Real-time demand intelligence for Saudi sports, concerts, and events. Know the second seats return — before everyone else."/>
+<title>SeatX — تنبيه رجوع تذاكر المباريات والفعاليات في السعودية</title>
+<meta name="description" content="SeatX يراقب المصادر الرسمية وينبّهك لحظة رجوع مقاعد المباريات والحفلات في السعودية قبل غيرك. جرّب 7 أيام مجانًا."/>
 <link rel="canonical" href="${SITE_URL}/"/>
 <meta name="robots" content="index,follow,max-image-preview:large"/>
 <link rel="manifest" href="/manifest.webmanifest"/>
@@ -301,13 +316,19 @@ function getHTML(events: any[], feed: any[], alerts24h: number = 0): string {
 <meta name="apple-mobile-web-app-title" content="SeatX"/>
 <meta property="og:type" content="website"/>
 <meta property="og:site_name" content="SeatX"/>
-<meta property="og:title" content="SeatX — السوق المباشر لتذاكر السعودية"/>
+<meta property="og:title" content="SeatX — تنبيه رجوع تذاكر المباريات والفعاليات في السعودية"/>
+<meta property="og:image" content="${OG_IMAGE}"/>
+<meta property="og:image:width" content="1200"/>
+<meta property="og:image:height" content="630"/>
+<meta property="og:image:alt" content="SeatX — تنبيه رجوع تذاكر المباريات في السعودية"/>
+<link rel="alternate" type="text/plain" href="${SITE_URL}/llms.txt" title="llms.txt"/>
 <meta property="og:description" content="اعرف لحظة رجوع المقاعد قبل أي شخص. تنبيهات فورية لتذاكر المباريات والحفلات والفعاليات في السعودية."/>
 <meta property="og:url" content="${SITE_URL}/"/>
 <meta property="og:locale" content="ar_SA"/>
 <meta property="og:locale:alternate" content="en_US"/>
 <meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:title" content="SeatX — السوق المباشر لتذاكر السعودية"/>
+<meta name="twitter:title" content="SeatX — تنبيه رجوع تذاكر المباريات والفعاليات في السعودية"/>
+<meta name="twitter:image" content="${OG_IMAGE}"/>
 <meta name="twitter:description" content="اعرف لحظة رجوع المقاعد قبل أي شخص. تنبيهات فورية للتذاكر في السعودية."/>
 <script type="application/ld+json">${JSON.stringify({
   '@context': 'https://schema.org',
@@ -316,7 +337,17 @@ function getHTML(events: any[], feed: any[], alerts24h: number = 0): string {
       description: 'تنبيهات فورية لرجوع تذاكر المباريات والحفلات والفعاليات في السعودية.',
       areaServed: 'SA' },
     { '@type': 'WebSite', '@id': SITE_URL + '/#site', name: 'SeatX', url: SITE_URL + '/',
-      inLanguage: 'ar', publisher: { '@id': SITE_URL + '/#org' } }
+      inLanguage: 'ar', publisher: { '@id': SITE_URL + '/#org' } },
+    { '@type': 'WebApplication', '@id': SITE_URL + '/#app', name: 'SeatX', url: SITE_URL + '/', inLanguage: 'ar',
+      applicationCategory: 'UtilitiesApplication', operatingSystem: 'Web',
+      description: 'تنبيهات فورية لرجوع تذاكر المباريات والحفلات والفعاليات في السعودية من المصادر الرسمية.',
+      publisher: { '@id': SITE_URL + '/#org' },
+      offers: [
+        { '@type': 'Offer', name: 'تجربة مجانية 7 أيام', price: '0', priceCurrency: 'USD', url: SITE_URL + '/' },
+        { '@type': 'Offer', name: 'الأولوية — سعر المؤسسين شهريًا (أول 1000)', price: '9', priceCurrency: 'USD', url: SITE_URL + '/' },
+        { '@type': 'Offer', name: 'وصول مدى الحياة (أول 100)', price: '199', priceCurrency: 'USD', url: SITE_URL + '/' },
+      ] },
+    faqLdBlock()
   ]
 })}</script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;0,9..40,900;1,9..40,400&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
@@ -1011,6 +1042,16 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
            <div class="why-stat-label" id="why-l3">نراقب لحظياً — أي تحرّك يصلك</div>`
       }
     </div>
+  </div>
+</div>
+
+<div class="section active-tab" id="faq" data-tab="home">
+  <div style="text-align:center;margin-bottom:22px">
+    <div class="section-title">أسئلة شائعة عن SeatX</div>
+  </div>
+  <div style="max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:10px">
+    ${SEO_FAQ.map(([q, a]) => `<details style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:0 18px"><summary style="cursor:pointer;padding:15px 0;font-weight:700;font-size:15px;color:#fff">${escapeHtml(q)}</summary><p style="margin:0 0 15px;color:var(--muted2);font-size:14px;line-height:1.8">${escapeHtml(a)}</p></details>`).join('')}
+    <p style="text-align:center;font-size:13px;color:var(--muted2);margin-top:6px"><a href="/guide/ticket-return-alerts" style="color:var(--lime)">دليل: كيف تمسك تذكرة رجعت</a> · <a href="/events" style="color:var(--lime)">الأحداث المُراقبة</a></p>
   </div>
 </div>
 
@@ -2816,8 +2857,9 @@ function getEventHTML(e: any, lang: 'en' | 'ar'): string {
 <meta property="og:locale" content="${isAr ? 'ar_SA' : 'en_US'}"/>
 <meta property="og:title" content="${safeTitle} — SeatX"/>
 <meta property="og:description" content="${escapeHtml(metaDesc)}"/>
-<meta name="twitter:card" content="${e.hero_image ? 'summary_large_image' : 'summary'}"/>
-${e.hero_image ? `<meta property="og:image" content="${escapeHtml(e.hero_image)}"/>` : ''}
+<meta name="twitter:card" content="summary_large_image"/>
+<meta property="og:image" content="${e.hero_image ? escapeHtml(e.hero_image) : OG_IMAGE}"/>
+<meta name="twitter:image" content="${e.hero_image ? escapeHtml(e.hero_image) : OG_IMAGE}"/>
 <script type="application/ld+json">${eventJsonLd}</script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 <style>
@@ -2901,7 +2943,7 @@ app.get('/', async (_req: Request, res: Response) => {
 // ── SEO / GEO ────────────────────────────────────────────────────────────────
 app.get('/robots.txt', (_req: Request, res: Response) => {
   res.type('text/plain').send(
-    `User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api/\n\nSitemap: ${SITE_URL}/sitemap.xml\n`
+    `User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api/\nDisallow: /partner\n\n# AI answer engines may read and cite public pages\nUser-agent: GPTBot\nAllow: /\nUser-agent: OAI-SearchBot\nAllow: /\nUser-agent: ChatGPT-User\nAllow: /\nUser-agent: PerplexityBot\nAllow: /\nUser-agent: ClaudeBot\nAllow: /\nUser-agent: Google-Extended\nAllow: /\n\nSitemap: ${SITE_URL}/sitemap.xml\n`
   );
 });
 
@@ -2926,26 +2968,45 @@ app.get('/manifest.webmanifest', (_req: Request, res: Response) => {
 });
 
 // Plain-language description for LLMs / answer engines (GEO). Helps ChatGPT,
-// Perplexity, Gemini describe + cite SeatX accurately.
-app.get('/llms.txt', (_req: Request, res: Response) => {
-  res.type('text/plain').send(
-`# SeatX
-> ${SITE_URL}
-SeatX هو خدمة تنبيهات فورية لتذاكر المباريات والحفلات والفعاليات في السعودية والخليج.
-عندما تنفد تذاكر حدث، يراقب SeatX المصادر الرسمية (webook، تكت ماستر، إلخ) وينبّهك لحظة رجوع المقاعد قبل غيرك.
+// Perplexity, Gemini describe + cite SeatX accurately. Facts only; no guarantees.
+function llmsBody(full: boolean): string {
+  const base = `# SeatX (سييت إكس)
 
-## What it does
-- Monitors official ticket sources and alerts users the second sold-out seats return.
-- Sells speed and priority, not tickets. It does not resell tickets or bypass queues.
-- Arabic-first, built for the Saudi/Gulf market.
+> SeatX هو خدمة تنبيهات فورية لتذاكر المباريات والحفلات والفعاليات في السعودية والخليج. عندما تنفد تذاكر حدث، يراقب SeatX المصادر الرسمية وينبّهك لحظة رجوع المقاعد قبل غيرك.
+> SeatX is a real-time ticket-return alert service for sports, concerts and events in Saudi Arabia. It monitors official ticket sources and alerts you the second sold-out seats return.
+
+## What it is / is not
+- It monitors official sources (for example webook and Ticketmaster) and sends instant alerts (email or push) when seats return.
+- It sells speed and priority of alerts, not tickets. It does not resell tickets, does not bypass queues, and does not guarantee that tickets will return. Purchase happens on the official source.
+- Arabic-first, built for the Saudi/Gulf market. Works in the browser and can be added to the home screen.
+
+## لمن
+- مشجعو الأندية والمنتخب، وحضور الحفلات والفعاليات اللي نفدت تذاكرها وينتظرون رجوع مقاعد.
+
+## Pricing (USD)
+- Free trial: 7 days, starts automatically.
+- Priority plan: $9/month founder price for the first 1000 subscribers (then $19/month).
+- Lifetime access: $199 one-time, first 100 only.
+
+## How to start
+1. Open ${SITE_URL}/ and pick a monitored event (or add yours).
+2. Enable the alert with your email (or push notifications).
+3. When seats return you get an instant alert; complete the purchase on the official source.
 
 ## Key pages
 - Home: ${SITE_URL}/
-- Events being monitored: ${SITE_URL}/events
-
-## Pricing
-- Free trial (7 days). Pro from $9/mo for founding users (first 1000), then $19/mo. Lifetime $199 (first 100 only).
-`);
+- Guide (Arabic): how to catch returned tickets: ${SITE_URL}/guide/ticket-return-alerts
+- Monitored events: ${SITE_URL}/events
+- Full version of this file: ${SITE_URL}/llms-full.txt
+`;
+  if (!full) return base;
+  return base + '\n## FAQ\n' + SEO_FAQ.map(([q, a]) => `Q: ${q}\nA: ${a}`).join('\n\n') + '\n';
+}
+app.get('/llms.txt', (_req: Request, res: Response) => {
+  res.type('text/plain; charset=utf-8').send(llmsBody(false));
+});
+app.get('/llms-full.txt', (_req: Request, res: Response) => {
+  res.type('text/plain; charset=utf-8').send(llmsBody(true));
 });
 
 app.get('/sitemap.xml', async (_req: Request, res: Response) => {
@@ -2953,6 +3014,7 @@ app.get('/sitemap.xml', async (_req: Request, res: Response) => {
   try { rows = (await pool.query('SELECT id, created_at FROM events ORDER BY id DESC LIMIT 5000')).rows; } catch (_) { }
   const urls: string[] = [
     `<url><loc>${SITE_URL}/</loc><changefreq>hourly</changefreq><priority>1.0</priority></url>`,
+    `<url><loc>${SITE_URL}/guide/ticket-return-alerts</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>`,
     `<url><loc>${SITE_URL}/events</loc><changefreq>hourly</changefreq><priority>0.9</priority></url>`,
     ...rows.map(r => {
       const lm = r.created_at ? `<lastmod>${new Date(r.created_at).toISOString().slice(0, 10)}</lastmod>` : '';
@@ -2966,6 +3028,88 @@ app.get('/sitemap.xml', async (_req: Request, res: Response) => {
 
 // Public, crawlable index of monitored events — the SEO hub that gives Google a
 // path to every event page and ranks for "تذاكر ... تنبيه رجوع المقاعد" queries.
+// SEO/GEO pillar page: ticket-return alerts. Facts only from SeatX's own behaviour; no guarantees, no invented stats.
+const GUIDE_FAQ: Array<[string, string]> = [
+  ['هل ترجع تذاكر المباريات فعلًا بعد ما تنفد؟', 'أحيانًا. قد تظهر مقاعد متاحة من جديد لما تنتهي مهلة دفع حجز أو تُلغى بعض الطلبات. لكن ما فيه وقت أو ضمان لرجوعها.'],
+  ['كيف أعرف إن رجعت مقاعد بدون ما أراقب الصفحة طول اليوم؟', 'فعّل تنبيه SeatX على الحدث. يراقب المصادر الرسمية ويرسل لك تنبيه فوري ببريدك أو بالإشعارات لحظة ظهور مقاعد.'],
+  ['هل SeatX يشتري التذكرة بدالي؟', 'لا. SeatX ينبّهك فقط، وتكمّل الشراء بنفسك من المصدر الرسمي. وهو لا يتجاوز الطوابير ولا يعيد بيع التذاكر.'],
+  ['كم يكلف SeatX؟', 'تجربة مجانية 7 أيام، وبعدها خطة الأولوية بسعر المؤسسين 9 دولار شهريًا لأول 1000 مشترك (بعدها 19 دولار)، أو وصول مدى الحياة بـ 199 دولار لأول 100.'],
+];
+
+app.get('/guide/ticket-return-alerts', (_req: Request, res: Response) => {
+  const url = SITE_URL + '/guide/ticket-return-alerts';
+  const title = 'تنبيه رجوع تذاكر المباريات في السعودية — دليل عملي';
+  const desc = 'كيف تمسك تذكرة مباراة أو حفلة رجعت بعد ما نفدت: قائمة خطوات جاهزة، وكيف ينبّهك SeatX لحظة رجوع المقاعد من المصادر الرسمية.';
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@graph': [
+      { '@type': 'Article', headline: title, description: desc, inLanguage: 'ar', datePublished: '2026-11-17', dateModified: '2026-11-17',
+        mainEntityOfPage: url, image: OG_IMAGE,
+        author: { '@type': 'Organization', name: 'SeatX', url: SITE_URL + '/' }, publisher: { '@type': 'Organization', name: 'SeatX', url: SITE_URL + '/' } },
+      { '@type': 'BreadcrumbList', itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'SeatX', item: SITE_URL + '/' },
+        { '@type': 'ListItem', position: 2, name: 'تنبيه رجوع التذاكر', item: url } ] },
+      { '@type': 'FAQPage', mainEntity: GUIDE_FAQ.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })) },
+    ],
+  }).replace(/</g, '\\u003c');
+  const faq = GUIDE_FAQ.map(([q, a]) => `<details><summary>${escapeHtml(q)}</summary><p>${escapeHtml(a)}</p></details>`).join('');
+  const inner = `
+    <div class="brand">SEAT<span class="x">X</span></div>
+    <h1>كيف تمسك تذكرة مباراة أو حفلة رجعت بعد ما نفدت</h1>
+    <div class="note"><b>تنبيه رجوع التذاكر</b> هو إشعار فوري يوصلك لما تظهر مقاعد متاحة على حدث كان «نفد». <b>SeatX هو خدمة سعودية لتنبيه رجوع التذاكر</b>: يراقب المصادر الرسمية (مثل webook وتكت ماستر) وينبّهك لحظة رجوع المقاعد، وأنت تكمّل الشراء من المصدر الرسمي.</div>
+
+    <h2>ليش تنفد التذاكر ثم ترجع؟</h2>
+    <p>لما تُفتح مبيعات مباراة أو حفلة كبيرة تنتهي التذاكر خلال وقت قصير. بعدها قد تظهر مقاعد من جديد، مثلًا لما تنتهي مهلة دفع حجز أو تُلغى بعض الطلبات. هذي المقاعد تبقى متاحة دقائق قليلة أحيانًا، ومن يشوفها أول هو اللي يحجزها. ما فيه وقت مضمون ولا ضمان إنها ترجع، لكن اللي يعرف بسرعة عنده فرصة أحسن.</p>
+
+    <h2>قائمة تجهيز قبل ما ترجع التذاكر</h2>
+    <ol>
+      <li><b>جهّز حسابك:</b> سجّل دخول في منصة التذاكر الرسمية قبل لا تحتاج.</li>
+      <li><b>جهّز الدفع:</b> بطاقتك محفوظة أو جاهزة، وحدّها يكفي للحجز.</li>
+      <li><b>حدد المطلوب:</b> كم تذكرة تبغى، وأي فئة تقبل فيها (مو بس الأفضل).</li>
+      <li><b>فعّل التنبيه:</b> لا تعتمد على إنك تفتح الصفحة كل شوي.</li>
+      <li><b>افتح التنبيه فورًا:</b> أول دقيقة هي الأهم، لا تأجل.</li>
+    </ol>
+
+    <h2>قالب خطة سريعة لحدثك</h2>
+    <div class="note" style="white-space:pre-line">الحدث:
+المنصة الرسمية:
+عدد التذاكر:        أقصى سعر أقبله:
+الفئات المقبولة (١-٢-٣):
+طريقة الدفع الجاهزة:
+التنبيه مفعّل؟  ☐ بريد  ☐ إشعارات</div>
+
+    <h2>أخطاء تضيّع عليك التذكرة</h2>
+    <ul>
+      <li>الاعتماد على تحديث الصفحة يدويًا بدل تنبيه آلي.</li>
+      <li>تسجيل دخول متأخر أو بطاقة تحتاج رمز تحقق ما جهّزته.</li>
+      <li>الشراء من حسابات غير رسمية. تأكد دايمًا إن الشراء من المصدر الرسمي.</li>
+      <li>ترك التنبيه مفعّل على إيميل ما تفتحه.</li>
+    </ul>
+
+    <h2>كيف يساعدك SeatX</h2>
+    <p>SeatX يراقب المصادر الرسمية على مدار الساعة، وإذا ظهرت مقاعد متاحة يوصلك تنبيه فوري ببريدك أو بإشعارات المتصفح. هو لا يبيع تذاكر، ولا يتجاوز الطوابير، ولا يضمن رجوع التذاكر: يبيع لك السرعة والأولوية في التنبيه فقط.</p>
+    <ul>
+      <li>تجربة مجانية 7 أيام.</li>
+      <li>خطة الأولوية: 9 دولار شهريًا سعر المؤسسين لأول 1000 مشترك (بعدها 19 دولار).</li>
+      <li>وصول مدى الحياة: 199 دولار دفعة واحدة لأول 100.</li>
+    </ul>
+    <p><a class="btn" href="/">ابدأ مجانًا — فعّل التنبيه</a> <a class="btn ghost" href="/events">شوف الأحداث المُراقبة</a></p>
+
+    <h2>أسئلة شائعة</h2>
+    <div class="faqb">${faq}</div>
+    <style>
+      h1{font-size:26px;line-height:1.5;margin:6px 0 14px;color:#fff}
+      p,li{font-size:15.5px;line-height:1.95;color:#d6dbe4}
+      h2{font-size:19px;margin:30px 0 8px;color:#fff}
+      ol,ul{padding-inline-start:22px}
+      .btn{margin:4px 0 4px 8px}
+      .faqb details{background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:0 16px;margin:8px 0}
+      .faqb summary{cursor:pointer;padding:13px 0;font-weight:700;color:#fff}
+      .faqb p{margin:0 0 13px}
+    </style>`;
+  res.type('html').send(pageShell(title, inner, { indexable: true, canonical: url, description: desc, jsonld: ld }));
+});
+
 app.get('/events', async (_req: Request, res: Response) => {
   let rows: any[] = [];
   try { rows = (await pool.query('SELECT id, title, status, watchers_count, event_date, location FROM events ORDER BY demand_score DESC, created_at DESC LIMIT 500')).rows; } catch (_) { }
@@ -3354,7 +3498,8 @@ function pageShell(title: string, inner: string, opts: { indexable?: boolean; ca
 <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <meta name="robots" content="${robots}"/>
 ${desc}${canon}
-<title>${escapeHtml(title)}</title>${jsonld}
+<title>${escapeHtml(title)}</title>
+${opts.indexable ? `<meta property="og:type" content="website"/><meta property="og:site_name" content="SeatX"/><meta property="og:locale" content="ar_SA"/><meta property="og:title" content="${escapeHtml(title)}"/>${opts.description ? `<meta property="og:description" content="${escapeHtml(opts.description)}"/>` : ''}${opts.canonical ? `<meta property="og:url" content="${escapeHtml(opts.canonical)}"/>` : ''}<meta property="og:image" content="${OG_IMAGE}"/><meta name="twitter:card" content="summary_large_image"/><meta name="twitter:image" content="${OG_IMAGE}"/>` : ''}${jsonld}
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet"/>
 <style>
 :root{--bg:#0a0e14;--surf:#111722;--surf2:#0d1119;--border:#1e2836;--lime:#a3e635;--txt:#e6e9ef;--txt2:#9aa4b2;--mono:'SFMono-Regular',ui-monospace,Menlo,monospace;--orange:#fb923c}
