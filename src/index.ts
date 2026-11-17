@@ -4,6 +4,7 @@ import { pool, setupDB, getActiveEventCount } from './db';
 import { runMonitorCycle } from './monitor';
 import { getActivityFeed, logActivity } from './feed';
 import { getPublicConfig } from './push';
+import { referralDecision } from './referral-policy';
 
 const app = express();
 app.use(express.json({ limit: '64kb' }));
@@ -2049,6 +2050,7 @@ async function subscribe(id, btnEl) {
     if (!r.ok) throw new Error(data.message || 'failed');
     tryEnablePush(email);
     ensureAccount(email);
+    if (data.inserted) setTimeout(function () { showFirstAlertShareCard(email); }, 1200);
     if (btnEl) {
       btnEl.textContent = '✅';
       btnEl.style.background = 'rgba(163,230,53,.2)';
@@ -2103,6 +2105,41 @@ async function submitPopupEmail() {
   } catch (_) { }
   closeModal('email-popup');
   location.reload();
+}
+
+// "ادعُ صديق، لك وله" — visible share card right after the user's FIRST alert.
+// Once per browser (localStorage); the account page keeps the permanent block.
+async function showFirstAlertShareCard(email) {
+  try { if (localStorage.getItem('seatx_first_alert_card')) return; } catch (_) { }
+  try {
+    const r = await fetch('/api/account?email=' + encodeURIComponent(email));
+    const d = await r.json();
+    const url = d && d.account && d.account.referral_url;
+    if (!url) return;
+    try { localStorage.setItem('seatx_first_alert_card', '1'); } catch (_) { }
+    closeModal('first-alert-share');
+    const msg = 'جرّب SeatX — ما تفوّت تذكرة إذا رجعت. سجّل من رابطي وسوّ أول تنبيه، ونأخذ يوم Pro مجاني كل واحد: ' + url;
+    const m = document.createElement('div');
+    m.className = 'modal-overlay';
+    m.id = 'first-alert-share';
+    m.innerHTML = '<div class="modal-box">'
+      + '<div class="modal-title">ادعُ صديق، لك وله 🎟️</div>'
+      + '<div class="modal-sub">تنبيهك الأول شغّال. أرسل رابطك لصديق، ولما يسوّي أول تنبيه ياخذ يوم Pro وتاخذ يوم Pro (لأول 5 أصدقاء).</div>'
+      + '<div class="modal-share-row">'
+      +   '<a class="modal-share-btn whatsapp" href="https://wa.me/?text=' + encodeURIComponent(msg) + '" target="_blank" rel="noopener">أرسل بالواتساب</a>'
+      +   '<button class="modal-share-btn copy" id="first-alert-copy">انسخ الرابط</button>'
+      + '</div>'
+      + '<button class="modal-skip" id="first-alert-later">لاحقًا</button>'
+      + '</div>';
+    m.addEventListener('click', function (e) { if (e.target === m) closeModal('first-alert-share'); });
+    document.body.appendChild(m);
+    const lb = document.getElementById('first-alert-later');
+    if (lb) lb.addEventListener('click', function () { closeModal('first-alert-share'); });
+    const cb = document.getElementById('first-alert-copy');
+    if (cb) cb.addEventListener('click', async function () {
+      try { await navigator.clipboard.writeText(url); cb.textContent = 'تم النسخ ✓'; } catch (_) { cb.textContent = url; }
+    });
+  } catch (_) { }
 }
 
 function openUpgradeModal(plan) {
@@ -3372,8 +3409,10 @@ function genReferralCode(): string {
 
 // First real watch is the referral gate. On the invitee's first watch we:
 // stamp accounts.first_watch_at, then reward BOTH sides +1 day of Pro (extend
-// pro_until). Idempotent — only qualifies rows still 'pending', so it can't
-// double-reward. Never throws (caller swallows).
+// pro_until). Atomic: a row is claimed with UPDATE ... WHERE status='pending'
+// RETURNING, so it can never double-reward. A referrer earns for at most
+// REFERRAL_MAX_REWARDS friends; same-signup-IP and self referrals earn nothing
+// (status 'rejected' / 'capped'). Never throws (caller swallows).
 async function qualifyReferralOnFirstWatch(email: string): Promise<void> {
   // Ensure the invitee has an account + stamp first watch (once).
   const acc = await pool.query('SELECT * FROM accounts WHERE email=$1', [email]).catch(() => ({ rows: [] as any[] }));
@@ -3388,6 +3427,22 @@ async function qualifyReferralOnFirstWatch(email: string): Promise<void> {
     [email]
   ).catch(() => ({ rows: [] as any[] }));
   for (const r of pend.rows) {
+    const refQ = await pool.query('SELECT email, signup_ip_hash FROM accounts WHERE referral_code=$1', [r.referrer_code]).catch(() => ({ rows: [] as any[] }));
+    const ref = refQ.rows[0];
+    const cntQ = await pool.query(`SELECT COUNT(*)::int AS c FROM referral_events WHERE referrer_code=$1 AND status='rewarded'`, [r.referrer_code]).catch(() => ({ rows: [{ c: 0 }] }));
+    const decision = referralDecision({
+      referrerEmail: ref?.email ?? null, inviteeEmail: email,
+      referrerIpHash: ref?.signup_ip_hash ?? null, inviteeIpHash: me.signup_ip_hash ?? null,
+      referrerRewardedCount: cntQ.rows[0]?.c || 0,
+    });
+    if (decision !== 'reward') {
+      await pool.query(`UPDATE referral_events SET status=$2 WHERE id=$1 AND status='pending'`,
+        [r.id, decision === 'capped' ? 'capped' : 'rejected']).catch(() => {});
+      continue;
+    }
+    // Atomic claim: only the call that flips pending -> rewarded pays out.
+    const claim = await pool.query(`UPDATE referral_events SET status='rewarded' WHERE id=$1 AND status='pending' RETURNING id`, [r.id]).catch(() => ({ rows: [] as any[] }));
+    if (!claim.rows.length) continue;
     // Reward the referrer (+1 day) — find them by their code.
     await pool.query(
       `UPDATE accounts SET pro_until = GREATEST(COALESCE(pro_until, NOW()), NOW()) + INTERVAL '1 day',
@@ -3402,7 +3457,6 @@ async function qualifyReferralOnFirstWatch(email: string): Promise<void> {
         WHERE email = $1`,
       [email]
     ).catch(() => {});
-    await pool.query(`UPDATE referral_events SET status='rewarded' WHERE id=$1`, [r.id]).catch(() => {});
   }
 }
 
@@ -3763,6 +3817,10 @@ app.post('/api/account', async (req: Request, res: Response) => {
         [email, guest, String(TRIAL_DAYS), founderNumber, code, refCode]
       );
     }
+
+    // Same-IP guard input: salted hash of the signup IP (raw IP is never stored).
+    await pool.query('UPDATE accounts SET signup_ip_hash=$2 WHERE email=$1',
+      [email, createHash('sha256').update('seatx-ref:' + getIP(req)).digest('hex').slice(0, 24)]).catch(() => {});
 
     // Record the pending referral (rewards on first watch, not now).
     if (refCode && refCode !== code) {

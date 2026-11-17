@@ -168,7 +168,7 @@ export async function setupDB(): Promise<void> {
       id SERIAL PRIMARY KEY,
       referrer_code TEXT NOT NULL,
       referred_email TEXT NOT NULL,
-      status TEXT DEFAULT 'pending',        -- pending | qualified | rewarded
+      status TEXT DEFAULT 'pending',        -- pending | rewarded | rejected (self/same IP) | capped (5 per referrer)
       created_at TIMESTAMPTZ DEFAULT NOW(),
       UNIQUE(referrer_code, referred_email)
     );
@@ -377,6 +377,8 @@ export async function setupDB(): Promise<void> {
     `CREATE UNIQUE INDEX IF NOT EXISTS subscriptions_event_email_uniq ON subscriptions(event_id, email)`,
     // Ambassador-funnel click counter on the existing prod accounts table.
     `ALTER TABLE accounts ADD COLUMN IF NOT EXISTS referral_clicks INTEGER DEFAULT 0`,
+    // Referral anti-abuse: salted hash of the signup IP (same-IP invites earn nothing).
+    `ALTER TABLE accounts ADD COLUMN IF NOT EXISTS signup_ip_hash TEXT`,
     // Invite-only affiliate flag on the existing prod accounts table.
     `ALTER TABLE accounts ADD COLUMN IF NOT EXISTS is_partner BOOLEAN DEFAULT false`,
     // One-time cleanup of QA/greploop test rows. Pattern-matched to test data
