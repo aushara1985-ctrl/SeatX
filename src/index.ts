@@ -1,4 +1,5 @@
 import express, { Request, Response } from 'express';
+import { POSTHOG_TAG } from './posthog';
 import { createHash, timingSafeEqual } from 'crypto';
 import { pool, setupDB, getActiveEventCount } from './db';
 import { runMonitorCycle } from './monitor';
@@ -797,7 +798,7 @@ footer{border-top:1px solid var(--border);padding:20px 32px;text-align:center;fo
 .market-monitor{display:inline-flex;align-items:center;gap:7px;color:var(--lime);font-size:13px;font-weight:700;font-family:'IBM Plex Sans Arabic',sans-serif}
 .market-monitor::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--lime);animation:pulse 1.6s infinite;flex-shrink:0}
 </style>
-</head>
+${POSTHOG_TAG}</head>
 <body class="ar">
 <div class="toast-container" id="tc"></div>
 
@@ -2921,7 +2922,7 @@ body{background:#080a0e;color:#f4f4f5;font-family:${isAr ? "'IBM Plex Sans Arabi
 .share-btn.twitter{background:#000;color:#fff;border:1px solid rgba(255,255,255,.15)}
 .share-btn.copy{background:rgba(255,255,255,.08);color:#fff}
 </style>
-</head>
+${POSTHOG_TAG}</head>
 <body>
 <div class="card">
   ${e.hero_image
@@ -3590,7 +3591,7 @@ td{color:var(--txt)}
 .pill.life{color:#c084fc;border-color:rgba(192,132,252,.4)}
 h2{font-size:16px;margin:26px 0 6px}
 .sub{color:var(--txt2);font-size:13.5px;margin-bottom:14px}
-</style></head><body><div class="wrap">${inner}</div></body></html>`;
+</style>${opts.indexable ? POSTHOG_TAG : ''}</head><body><div class="wrap">${inner}</div></body></html>`;
 }
 
 // The PARTNER (affiliate) earnings dashboard — a real wallet: how many signed
