@@ -6,7 +6,8 @@ import { pool, setupDB, getActiveEventCount } from './db';
 import { runMonitorCycle } from './monitor';
 import { getActivityFeed, logActivity } from './feed';
 import { getPublicConfig } from './push';
-import { referralDecision } from './referral-policy';
+import { parseRefCode, referralFriendDays, referralTotalDays, referralProgressLine, referralShareText } from './referral-policy';
+import { qualifyReferral } from './referral';
 import { registerLegal } from './legal';
 
 const app = express();
@@ -1094,8 +1095,8 @@ ${fanxOn ? `
 
   <!-- Referral — filled live by renderAccountStatus() -->
   <div class="acc-block" id="acc-ref-block" style="display:none">
-    <div class="acc-h" id="acc-ref-h">ادعُ أصدقاءك — اكسب أيام Pro</div>
-    <div class="acc-sub" id="acc-ref-sub">كل صديق يسجّل من رابطك ويفعّل أول مراقبة = <strong style="color:var(--lime)">+1 يوم Pro</strong> لك وله.</div>
+    <div class="acc-h" id="acc-ref-h">دعواتي</div>
+    <div class="acc-sub" id="acc-ref-sub">صاحبين = <strong style="color:var(--lime)">أسبوع Pro</strong>، وكل صاحب زيادة = 3 أيام. الصاحب يُحسب لما يسجّل من رابطك ويفعّل أول مراقبة.</div>
     <div id="acc-ref-body"></div>
   </div>
 
@@ -2122,13 +2123,13 @@ async function showFirstAlertShareCard(email) {
     if (!url) return;
     try { localStorage.setItem('seatx_first_alert_card', '1'); } catch (_) { }
     closeModal('first-alert-share');
-    const msg = 'جرّب SeatX — ما تفوّت تذكرة إذا رجعت. سجّل من رابطي وسوّ أول تنبيه، ونأخذ يوم Pro مجاني كل واحد: ' + url;
+    const msg = 'أستخدم SeatX يتابع لي التذاكر وينبّهني إذا رجعت مقاعد. جرّبه، وأول أسبوع Pro مجاني: ' + url;
     const m = document.createElement('div');
     m.className = 'modal-overlay';
     m.id = 'first-alert-share';
     m.innerHTML = '<div class="modal-box">'
       + '<div class="modal-title">ادعُ صديق، لك وله 🎟️</div>'
-      + '<div class="modal-sub">تنبيهك الأول شغّال. أرسل رابطك لصديق، ولما يسوّي أول تنبيه ياخذ يوم Pro وتاخذ يوم Pro (لأول 5 أصدقاء).</div>'
+      + '<div class="modal-sub">تنبيهك الأول شغّال. أرسل رابطك لصديق، ولما يسوّي أول تنبيه يُحسب لك. صاحبين = أسبوع Pro، وكل صاحب زيادة = 3 أيام.</div>'
       + '<div class="modal-share-row">'
       +   '<a class="modal-share-btn whatsapp" href="https://wa.me/?text=' + encodeURIComponent(msg) + '" target="_blank" rel="noopener">أرسل بالواتساب</a>'
       +   '<button class="modal-share-btn copy" id="first-alert-copy">انسخ الرابط</button>'
@@ -2612,8 +2613,10 @@ function renderAccountStatus() {
 // Capture ?ref=CODE once and remember it for the eventual signup.
 function captureRef() {
   try {
-    const p = new URLSearchParams(location.search).get('ref');
-    if (p && /^SX[A-Z2-9]{5}$/.test(p)) {
+    var p = new URLSearchParams(location.search).get('ref');
+    var pm = p ? String(p).toUpperCase().replace(/^U-/, '') : '';
+    if (pm && /^SX[A-Z2-9]{5}$/.test(pm)) {
+      p = pm;
       localStorage.setItem('seatx_ref', p);
       // Count the click once per browser per code (top of the partner funnel).
       // Guarded by localStorage so a refresh doesn't re-count; server also
@@ -2723,7 +2726,7 @@ async function loadAccountCard(email) {
       html += '<div style="margin-top:10px;padding:12px 14px;border-radius:10px;background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.2);font-size:13px;line-height:1.7;color:#e4e4e7">'
         + '<strong style="color:#fb923c">انتهت تجربتك Pro ⚡</strong><br>رجّع السرعة: '
         + '<button class="pc-btn" id="acc-trial-upgrade" style="width:auto;padding:6px 12px;margin:6px 6px 0 0;display:inline-block;font-size:12px">ترقية ٩$</button>'
-        + '<span style="color:var(--muted2);font-size:12px">أو ادعُ صديق = +1 يوم مجانًا</span>'
+        + '<span style="color:var(--muted2);font-size:12px">أو ادعُ صاحبين = أسبوع Pro مجانًا</span>'
         + '</div>';
     }
     founder.innerHTML = html;
@@ -2736,15 +2739,47 @@ async function loadAccountCard(email) {
     refBlock.style.display = 'block';
     const qualified = (typeof acc.referrals_qualified === 'number') ? acc.referrals_qualified : 0;
     const earned = acc.referral_days_earned || 0;
+    const refUrl = acc.referral_url;
+    const refCodeTxt = acc.referral_code || '';
+    const friends = acc.referral_friends || [];
+    const pct = Math.min(100, Math.round(Math.min(qualified, 2) / 2 * 100));
+    const friendsHtml = friends.length
+      ? friends.map(function (f) { return '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px"><span style="direction:ltr">' + escapeHtmlClient(f.name) + '</span><span style="color:var(--lime);font-family:var(--mono)">' + (f.days ? '+' + f.days + ' أيام' : 'انضم') + '</span></div>'; }).join('')
+      : '<div style="font-size:12.5px;color:var(--muted2)">ما انضم أحد لين الحين.</div>';
+    // Ready-made content for getting people in (honest: no results claimed, no income promised).
+    window._refTexts = [
+      'اللقطة 1: صوّر شاشتك وانت تلصق رابط حدث في SeatX.\\nاللقطة 2: قول: «جرّبت تطبيق يتابع لي التذاكر وينبّهني إذا رجعت مقاعد».\\nاللقطة 3: «الرابط في البايو، وأول أسبوع Pro مجاني».',
+      'أستخدم SeatX يتابع لي التذاكر وينبّهني إذا رجعت مقاعد. جرّبه، وأول أسبوع Pro مجاني: ' + refUrl,
+      'تذاكر الحدث خلصت؟ SeatX ينبّهني إذا رجعت. رابطي: ' + refUrl + ' (كودي ' + refCodeTxt + ')\\nSeatX alerts me when tickets come back. Try it: ' + refUrl
+    ];
+    const guideTitles = ['فكرة فيديو تيك توك / ريلز (٣ أسطر)', 'نص جاهز لحالة الواتساب', 'نص جاهز للستوري'];
+    const guideHtml = window._refTexts.map(function (t, i) {
+      return '<div style="margin-top:10px;padding:12px;border:1px solid var(--border);border-radius:12px">'
+        + '<div style="font-size:12.5px;font-weight:700;color:#fff;margin-bottom:6px">' + guideTitles[i] + '</div>'
+        + '<div style="font-size:12.5px;color:var(--muted2);line-height:1.8;white-space:pre-line">' + escapeHtmlClient(t) + '</div>'
+        + '<button class="gbtn" style="padding:8px 14px;font-size:12.5px;border-radius:10px;margin-top:8px;width:auto" data-copy-ref="' + i + '">نسخ</button></div>';
+    }).join('');
     refBody.innerHTML = ''
-      + '<div style="display:flex;gap:8px;margin-top:12px">'
-      +   '<input class="modal-input" id="acc-ref-url" readonly value="' + escapeHtmlClient(acc.referral_url) + '" style="margin-bottom:0;font-size:13px;direction:ltr;text-align:left"/>'
+      + '<div style="font-weight:800;color:#fff;font-size:15px;margin-top:10px" id="acc-ref-progress">' + escapeHtmlClient(acc.referral_progress || '') + '</div>'
+      + '<div style="height:7px;border-radius:999px;background:rgba(255,255,255,.08);margin-top:8px;overflow:hidden"><div style="height:100%;width:' + pct + '%;background:var(--lime);border-radius:999px"></div></div>'
+      + '<div style="display:flex;gap:8px;margin-top:14px">'
+      +   '<input class="modal-input" id="acc-ref-url" readonly value="' + escapeHtmlClient(refUrl) + '" style="margin-bottom:0;font-size:13px;direction:ltr;text-align:left"/>'
       +   '<button class="gbtn" style="padding:12px 18px;font-size:13px;border-radius:11px;white-space:nowrap" onclick="copyRefLink()">نسخ</button>'
       + '</div>'
       + '<div style="display:flex;gap:8px;margin-top:8px">'
-      +   '<a class="pc-btn" style="flex:1;text-decoration:none;text-align:center;padding:11px" href="https://wa.me/?text=' + encodeURIComponent('جرّب SeatX — ما تفوّت تذكرة إذا رجعت: ' + acc.referral_url) + '" target="_blank" rel="noopener">مشاركة واتساب</a>'
+      +   '<a class="pc-btn" style="flex:1;text-decoration:none;text-align:center;padding:11px" href="https://wa.me/?text=' + encodeURIComponent(acc.referral_share_text || refUrl) + '" target="_blank" rel="noopener">مشاركة واتساب</a>'
       + '</div>'
-      + '<div style="margin-top:10px;font-size:12px;color:var(--muted2);font-family:var(--mono)">دعوات مؤهّلة: ' + qualified + ' · أيام كسبتها: ' + earned + '</div>';
+      + '<div style="margin-top:14px;font-size:13px;font-weight:700;color:#fff">أيامك المكتسبة: <span style="color:var(--lime);font-family:var(--mono)">' + earned + ' يوم</span></div>'
+      + '<div style="margin-top:12px;font-size:13px;font-weight:700;color:#fff">أصحابك</div>' + friendsHtml
+      + (acc.referrals_waiting ? '<div style="margin-top:6px;font-size:12px;color:var(--muted2)">' + acc.referrals_waiting + ' سجّلوا وينتظرون يفعّلون أول مراقبة.</div>' : '')
+      + '<div style="margin-top:18px;font-size:14px;font-weight:800;color:#fff">كيف تجيب ناس</div>'
+      + '<div style="font-size:12.5px;color:var(--muted2);margin-top:4px">أفكار جاهزة برابطك. عدّلها بأسلوبك.</div>' + guideHtml;
+    refBody.querySelectorAll('[data-copy-ref]').forEach(function (btn) {
+      btn.addEventListener('click', async function () {
+        var t = window._refTexts[parseInt(btn.getAttribute('data-copy-ref'), 10)] || '';
+        try { await navigator.clipboard.writeText(t); btn.textContent = 'تم النسخ ✓'; } catch (_) { btn.textContent = 'انسخه يدوياً'; }
+      });
+    });
     // NOTE: no self-serve "become a partner" CTA here. The affiliate program is
     // invite-only — the founder picks partners from /admin and hands them their
     // /partner link directly.
@@ -3413,57 +3448,10 @@ function genReferralCode(): string {
   return 'SX' + s;
 }
 
-// First real watch is the referral gate. On the invitee's first watch we:
-// stamp accounts.first_watch_at, then reward BOTH sides +1 day of Pro (extend
-// pro_until). Atomic: a row is claimed with UPDATE ... WHERE status='pending'
-// RETURNING, so it can never double-reward. A referrer earns for at most
-// REFERRAL_MAX_REWARDS friends; same-signup-IP and self referrals earn nothing
-// (status 'rejected' / 'capped'). Never throws (caller swallows).
+// First real watch is the referral gate (logic lives in ./referral.ts so it can be unit-tested).
+// 2 friends = 7 days Pro, +3 per extra friend, cap 60 days. Never throws (caller swallows).
 async function qualifyReferralOnFirstWatch(email: string): Promise<void> {
-  // Ensure the invitee has an account + stamp first watch (once).
-  const acc = await pool.query('SELECT * FROM accounts WHERE email=$1', [email]).catch(() => ({ rows: [] as any[] }));
-  const me = acc.rows[0];
-  if (!me) return;                       // no account -> nothing to qualify
-  if (me.first_watch_at) return;         // already had a first watch -> done
-  await pool.query('UPDATE accounts SET first_watch_at=NOW() WHERE email=$1 AND first_watch_at IS NULL', [email]).catch(() => {});
-
-  // Any pending referral where THIS user was the invitee?
-  const pend = await pool.query(
-    `SELECT * FROM referral_events WHERE referred_email=$1 AND status='pending'`,
-    [email]
-  ).catch(() => ({ rows: [] as any[] }));
-  for (const r of pend.rows) {
-    const refQ = await pool.query('SELECT email, signup_ip_hash FROM accounts WHERE referral_code=$1', [r.referrer_code]).catch(() => ({ rows: [] as any[] }));
-    const ref = refQ.rows[0];
-    const cntQ = await pool.query(`SELECT COUNT(*)::int AS c FROM referral_events WHERE referrer_code=$1 AND status='rewarded'`, [r.referrer_code]).catch(() => ({ rows: [{ c: 0 }] }));
-    const decision = referralDecision({
-      referrerEmail: ref?.email ?? null, inviteeEmail: email,
-      referrerIpHash: ref?.signup_ip_hash ?? null, inviteeIpHash: me.signup_ip_hash ?? null,
-      referrerRewardedCount: cntQ.rows[0]?.c || 0,
-    });
-    if (decision !== 'reward') {
-      await pool.query(`UPDATE referral_events SET status=$2 WHERE id=$1 AND status='pending'`,
-        [r.id, decision === 'capped' ? 'capped' : 'rejected']).catch(() => {});
-      continue;
-    }
-    // Atomic claim: only the call that flips pending -> rewarded pays out.
-    const claim = await pool.query(`UPDATE referral_events SET status='rewarded' WHERE id=$1 AND status='pending' RETURNING id`, [r.id]).catch(() => ({ rows: [] as any[] }));
-    if (!claim.rows.length) continue;
-    // Reward the referrer (+1 day) — find them by their code.
-    await pool.query(
-      `UPDATE accounts SET pro_until = GREATEST(COALESCE(pro_until, NOW()), NOW()) + INTERVAL '1 day',
-                           referral_days_earned = COALESCE(referral_days_earned,0) + 1
-        WHERE referral_code = $1`,
-      [r.referrer_code]
-    ).catch(() => {});
-    // Reward the invitee (+1 day).
-    await pool.query(
-      `UPDATE accounts SET pro_until = GREATEST(COALESCE(pro_until, NOW()), NOW()) + INTERVAL '1 day',
-                           referral_days_earned = COALESCE(referral_days_earned,0) + 1
-        WHERE email = $1`,
-      [email]
-    ).catch(() => {});
-  }
+  await qualifyReferral(pool as any, email);
 }
 
 function accountView(row: any): Record<string, unknown> {
@@ -3486,7 +3474,7 @@ function accountView(row: any): Record<string, unknown> {
     pro_until: row.pro_until,
     days_left: proActive ? daysLeft : 0,
     referral_code: row.referral_code,
-    referral_url: row.referral_code ? (base + '/?ref=' + row.referral_code) : null,
+    referral_url: row.referral_code ? (base + '/?ref=u-' + row.referral_code) : null,
     partner_url: row.referral_code ? (base + '/partner?code=' + row.referral_code) : null,
     referral_days_earned: row.referral_days_earned || 0,
     referral_clicks: row.referral_clicks || 0,
@@ -3793,7 +3781,7 @@ app.post('/api/account', async (req: Request, res: Response) => {
     const { email, guest_id, ref } = req.body || {};
     if (!isValidEmail(email)) return res.status(400).json({ error: 'invalid_email' });
     const guest = typeof guest_id === 'string' ? guest_id.slice(0, 40) : null;
-    const refCode = (typeof ref === 'string' && /^SX[A-Z2-9]{5}$/.test(ref)) ? ref : null;
+    const refCode = parseRefCode(ref);
 
     // Already exists? return it (idempotent).
     const existing = await pool.query('SELECT * FROM accounts WHERE email=$1', [email]);
@@ -3853,15 +3841,27 @@ app.get('/api/account', async (req: Request, res: Response) => {
     if (!isValidEmail(email)) return res.status(400).json({ error: 'invalid_email' });
     const r = await pool.query('SELECT * FROM accounts WHERE email=$1', [email]);
     if (!r.rows[0]) return res.status(404).json({ error: 'not_found' });
-    // Also surface how many of this account's referrals have qualified.
-    let qualified = 0;
+    // Referral tally: progress, masked friends (first-qualified first) and days earned.
+    let qualified = 0; let waiting = 0; const friends: Array<{ name: string; days: number }> = [];
     try {
       const q = await pool.query(
-        `SELECT COUNT(*)::int AS c FROM referral_events WHERE referrer_code=$1 AND status IN ('qualified','rewarded')`,
+        `SELECT e.status, e.referred_email FROM referral_events e
+          WHERE e.referrer_code=$1 AND e.status IN ('pending','rewarded') ORDER BY e.id ASC LIMIT 200`,
         [r.rows[0].referral_code]
       );
-      qualified = q.rows[0]?.c || 0;
+      for (const row of q.rows) {
+        if (row.status === 'rewarded') { qualified++; friends.push({ name: maskEmail(row.referred_email), days: referralFriendDays(qualified) }); }
+        else waiting++;
+      }
     } catch (_) { }
+    const url = r.rows[0].referral_code ? ((process.env.PUBLIC_BASE_URL || 'https://seatx.space') + '/?ref=u-' + r.rows[0].referral_code) : null;
+    res.json({ success: true, account: {
+      ...accountView(r.rows[0]), referrals_qualified: qualified, referrals_waiting: waiting,
+      referral_days_earned: referralTotalDays(qualified),
+      referral_progress: referralProgressLine(qualified), referral_friends: friends,
+      referral_share_text: url ? referralShareText(url) : null,
+    } });
+    return;
     res.json({ success: true, account: { ...accountView(r.rows[0]), referrals_qualified: qualified } });
   } catch (e: any) {
     res.status(500).json({ error: 'server_error', message: e.message });
@@ -3898,7 +3898,7 @@ app.get('/api/stats', async (_req: Request, res: Response) => {
 app.post('/api/ref-hit', async (req: Request, res: Response) => {
   try {
     const { code } = req.body || {};
-    if (typeof code !== 'string' || !/^SX[A-Z2-9]{5}$/.test(code)) {
+    if (!parseRefCode(code)) {
       return res.status(400).json({ error: 'invalid_code' });
     }
     // One counted hit per (IP, code) per 10 min — dampens refresh inflation.
