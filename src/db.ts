@@ -381,6 +381,10 @@ export async function setupDB(): Promise<void> {
     `ALTER TABLE accounts ADD COLUMN IF NOT EXISTS signup_ip_hash TEXT`,
     // Invite-only affiliate flag on the existing prod accounts table.
     `ALTER TABLE accounts ADD COLUMN IF NOT EXISTS is_partner BOOLEAN DEFAULT false`,
+    // Lifecycle email idempotency flags (welcome + trial reminders). NULL = not sent.
+    `ALTER TABLE accounts ADD COLUMN IF NOT EXISTS welcome_sent_at TIMESTAMPTZ`,
+    `ALTER TABLE accounts ADD COLUMN IF NOT EXISTS trial_remind2_sent_at TIMESTAMPTZ`,
+    `ALTER TABLE accounts ADD COLUMN IF NOT EXISTS trial_remind0_sent_at TIMESTAMPTZ`,
     // One-time cleanup of QA/greploop test rows. Pattern-matched to test data
     // only — cannot touch a real signup or a real allowlisted event. Idempotent
     // (matches nothing once cleaned). The prod DB is internal-only, so this runs

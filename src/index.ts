@@ -1,3 +1,4 @@
+import { sendWelcomeOnce, runTrialReminders } from './lifecycle';
 import express, { Request, Response } from 'express';
 import { POSTHOG_TAG } from './posthog';
 import { createHash, timingSafeEqual } from 'crypto';
@@ -3836,6 +3837,7 @@ app.post('/api/account', async (req: Request, res: Response) => {
       ).catch(() => {});
     }
 
+    sendWelcomeOnce(email);
     res.json({ success: true, account: accountView(ins.rows[0]), isNew: true });
   } catch (e: any) {
     res.status(500).json({ error: 'server_error', message: e.message });
@@ -4215,6 +4217,8 @@ app.listen(PORT, async () => {
   // Monitor cycle is also DB-dependent — only start it if setupDB succeeded.
   // Otherwise we'd spam the console with reconnect errors every 15s.
   if (process.env.DATABASE_URL) {
+    // Trial-end reminders (2 days before + last day), hourly, future-ending trials only.
+    setTimeout(() => { runTrialReminders(); setInterval(() => { runTrialReminders(); }, 3600_000); }, 90_000);
     setTimeout(async () => {
       try { await runMonitorCycle(); } catch (e) { console.error('[monitor] cycle error:', e); }
       setInterval(() => { runMonitorCycle().catch(e => console.error('[monitor]', e)); }, 15000);
