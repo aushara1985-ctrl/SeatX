@@ -6,6 +6,7 @@ import { runMonitorCycle } from './monitor';
 import { getActivityFeed, logActivity } from './feed';
 import { getPublicConfig } from './push';
 import { referralDecision } from './referral-policy';
+import { registerLegal } from './legal';
 
 const app = express();
 app.use(express.json({ limit: '64kb' }));
@@ -1200,6 +1201,7 @@ ${fanxOn ? `
 </div>
 
 <footer id="ftr">© 2026 SEATX · BUILT FOR FANS · 🇸🇦 SAUDI ARABIA</footer>
+<div style="text-align:center;padding:0 16px 22px;font-size:12px;color:var(--muted)"><a href="/terms" style="color:var(--muted2);margin:0 8px">الشروط</a><a href="/privacy" style="color:var(--muted2);margin:0 8px">الخصوصية</a><a href="/terms#refund" style="color:var(--muted2);margin:0 8px">الاسترداد</a><a href="/terms#contact" style="color:var(--muted2);margin:0 8px">تواصل</a><div style="margin-top:6px">يُشغّل هذا المنتج من قبل inventive gaze, LLC · hala@inab.app</div></div>
 
 <!-- ════ BOTTOM NAV — terminal-minimal, mobile only ════════════════ -->
 <!-- See docs/design.md §5. Outline SVG icons, no emoji, no fills, no glow. -->
@@ -2979,6 +2981,8 @@ app.get('/', async (_req: Request, res: Response) => {
 });
 
 // ── SEO / GEO ────────────────────────────────────────────────────────────────
+registerLegal(app, SITE_URL);
+
 app.get('/robots.txt', (_req: Request, res: Response) => {
   res.type('text/plain').send(
     `User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api/\nDisallow: /partner\n\n# AI answer engines may read and cite public pages\nUser-agent: GPTBot\nAllow: /\nUser-agent: OAI-SearchBot\nAllow: /\nUser-agent: ChatGPT-User\nAllow: /\nUser-agent: PerplexityBot\nAllow: /\nUser-agent: ClaudeBot\nAllow: /\nUser-agent: Google-Extended\nAllow: /\n\nSitemap: ${SITE_URL}/sitemap.xml\n`
