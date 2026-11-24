@@ -2680,8 +2680,31 @@ async function ensureAccount(email) {
       body: JSON.stringify({ email: email, guest_id: (window.fxGuest ? window.fxGuest() : null), ref: getRef() }),
     });
     const d = await r.json();
+    if (d && d.isNew) trackSignup(email, d.account);
     return (d && d.account) ? d.account : null;
   } catch (_) { return null; }
+}
+
+// PostHog: one signup_completed + trial_started per NEW account (server says isNew), with the first-visit source.
+// No backslashes/backticks here: this script lives inside a TS template string.
+function trackSignup(email, acc) {
+  try {
+    if (!window.posthog || !posthog.capture) return;
+    const u = (localStorage.getItem('seatx_utm') || '').split('/');
+    const q = new URLSearchParams(location.search);
+    const em = String(email || '').toLowerCase();
+    const pr = {
+      product: 'SeatX', method: 'email',
+      src: q.get('src') || (u.length === 1 ? u[0] : '') || null,
+      ref: getRef(),
+      utm_source: u[0] || null,
+      utm_medium: (u.length > 1 ? u[1] : '') || null,
+      utm_campaign: (u.length > 2 ? u[2] : '') || null,
+      is_test: em.indexOf('test-') === 0 || em.indexOf('test_') === 0 || em.indexOf('+test@') > -1 || em.indexOf('@example.') > -1,
+    };
+    posthog.capture('signup_completed', pr);
+    posthog.capture('trial_started', Object.assign({ trial_days: (acc && acc.days_left) || 7 }, pr));
+  } catch (_) { }
 }
 
 // Render the founder/trial card + referral block from a GET /api/account.
