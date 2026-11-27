@@ -5,6 +5,16 @@ export const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
+// Rows created by the old "Demo" button ("... — Demo"). They are NOT real events and must
+// never be listed, counted or monitored. Excluded in queries (never deleted: real emails may
+// be subscribed to them). Usage: `WHERE ${notDemoSql('title')}`.
+export function notDemoSql(col: string = 'title'): string {
+  return `${col} !~* '[[:space:]][—–-][[:space:]]*demo[[:space:]]*$'`;
+}
+export function isDemoTitle(title: unknown): boolean {
+  return typeof title === 'string' && /\s[—–-]\s*demo\s*$/i.test(title.trim());
+}
+
 export async function setupDB(): Promise<void> {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS events (
