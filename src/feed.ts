@@ -1,4 +1,4 @@
-import { pool } from './db';
+import { pool, notDemoSql } from './db';
 import { ActivityFeedItem, ActivityType } from './types';
 
 const TYPE_EMOJI: Record<ActivityType, string> = {
@@ -19,6 +19,7 @@ export async function getActivityFeed(limit = 20): Promise<ActivityFeedItem[]> {
     `SELECT al.id, al.event_id, al.type, al.message, al.created_at, e.title as event_title
      FROM activity_logs al
      LEFT JOIN events e ON e.id = al.event_id
+     WHERE e.id IS NULL OR ${notDemoSql('e.title')}
      ORDER BY al.created_at DESC
      LIMIT $1`,
     [limit]

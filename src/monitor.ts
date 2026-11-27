@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { pool } from './db';
+import { pool, notDemoSql } from './db';
 import { sendAlert, sendAlertWithAgentMessage } from './notify';
 import { updateDemand } from './demand';
 import { sanitizeMetadata } from './metadata';
@@ -442,7 +442,8 @@ export async function runMonitorCycle(): Promise<void> {
     // (ordered by priority_score DESC so the most important always run first).
     const { rows } = await pool.query(
       `SELECT * FROM events
-       WHERE next_check_at IS NULL OR next_check_at <= NOW()
+       WHERE (next_check_at IS NULL OR next_check_at <= NOW())
+         AND ${notDemoSql('title')}
        ORDER BY priority_score DESC, demand_score DESC
        LIMIT 40`
     );
