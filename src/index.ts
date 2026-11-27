@@ -2,7 +2,7 @@ import { sendWelcomeOnce, runTrialReminders } from './lifecycle';
 import express, { Request, Response } from 'express';
 import { POSTHOG_TAG } from './posthog';
 import { createHash, timingSafeEqual } from 'crypto';
-import { pool, setupDB, getActiveEventCount } from './db';
+import { pool, setupDB, getActiveEventCount, notDemoSql, isDemoTitle } from './db';
 import { runMonitorCycle } from './monitor';
 import { getActivityFeed, logActivity } from './feed';
 import { getPublicConfig } from './push';
@@ -855,7 +855,6 @@ ${POSTHOG_TAG}</head>
       <button class="qh-btn" id="qh-btn" onclick="quickAdd()">نبّهني أول ما ترجع مقاعد ←</button>
     </div>
     <div class="qh-hint" id="qh-hint">انسخ الرابط من صفحة المباراة في webook أو تكت ماستر</div>
-    <div class="qh-or" id="qh-or-wrap"><span id="qh-or">أو </span><button class="qh-demo" id="qh-demo" onclick="tryDemo()">جرّب بدون رابط</button></div>
   </div>
 </div>
 
@@ -1859,31 +1858,6 @@ async function quickAdd() {
     btn.textContent = orig;
     btn.disabled = false;
     const sk = document.getElementById('sk-temp');
-    if (sk) sk.remove();
-  }
-}
-
-async function tryDemo() {
-  const t = T[lang];
-  const btn = document.getElementById('qh-demo');
-  if (btn) { btn.textContent = t.adding; btn.disabled = true; }
-  const grid = document.getElementById('egrid');
-  if (grid) {
-    const sk = document.createElement('div');
-    sk.className = 'skeleton';
-    sk.id = 'sk-demo';
-    grid.prepend(sk);
-  }
-  try {
-    const r = await fetch('/api/events', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: 'Al Nassr vs Al Hilal — Demo', eventUrl: 'https://www.ticketmaster.sa/' }) });
-    const data = await r.json();
-    if (!r.ok) throw new Error(data.message || 'failed');
-    pendingEventId = data.id;
-    showEmailPopup(data.id);
-    setTimeout(() => { if (!document.getElementById('email-popup')) location.reload(); }, 4000);
-  } catch (e) {
-    if (btn) { btn.textContent = t.qhDemo; btn.disabled = false; }
-    const sk = document.getElementById('sk-demo');
     if (sk) sk.remove();
   }
 }
@@ -3020,7 +2994,7 @@ app.get('/', async (_req: Request, res: Response) => {
   let feed: any[] = [];
   let alerts24h = 0;
   try {
-    const r = await pool.query('SELECT * FROM events ORDER BY demand_score DESC, created_at DESC');
+    const r = await pool.query(`SELECT * FROM events WHERE ${notDemoSql()} ORDER BY demand_score DESC, created_at DESC`);
     events = r.rows;
   } catch (_) { }
   try {
@@ -3112,7 +3086,7 @@ app.get('/llms-full.txt', (_req: Request, res: Response) => {
 
 app.get('/sitemap.xml', async (_req: Request, res: Response) => {
   let rows: any[] = [];
-  try { rows = (await pool.query('SELECT id, created_at FROM events ORDER BY id DESC LIMIT 5000')).rows; } catch (_) { }
+  try { rows = (await pool.query(`SELECT id, created_at FROM events WHERE ${notDemoSql()} ORDER BY id DESC LIMIT 5000`)).rows; } catch (_) { }
   const urls: string[] = [
     `<url><loc>${SITE_URL}/</loc><changefreq>hourly</changefreq><priority>1.0</priority></url>`,
     `<url><loc>${SITE_URL}/guide/ticket-return-alerts</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>`,
@@ -3213,7 +3187,7 @@ app.get('/guide/ticket-return-alerts', (_req: Request, res: Response) => {
 
 app.get('/events', async (_req: Request, res: Response) => {
   let rows: any[] = [];
-  try { rows = (await pool.query('SELECT id, title, status, watchers_count, event_date, location FROM events ORDER BY demand_score DESC, created_at DESC LIMIT 500')).rows; } catch (_) { }
+  try { rows = (await pool.query(`SELECT id, title, status, watchers_count, event_date, location FROM events WHERE ${notDemoSql()} ORDER BY demand_score DESC, created_at DESC LIMIT 500`)).rows; } catch (_) { }
   const statusAr = (s: string) => s === 'available' ? '<span class="pill pro">متوفّرة</span>' : s === 'sold_out' ? '<span class="pill" style="color:#fb923c;border-color:rgba(251,146,60,.4)">نفدت</span>' : '<span class="pill">قيد المراقبة</span>';
   const cards = rows.map(e => `
     <a class="ev" href="/event/${e.id}">
@@ -3257,6 +3231,11 @@ app.post('/api/events', async (req: Request, res: Response) => {
     }
     // Normalize first — prepend https:// when missing so a pasted
     // "webook.com/..." is accepted instead of falsely rejected.
+    // No fake activity: a "demo" event must never become a real row (old cached clients
+    // still POST "... — Demo"). Real events only.
+    if (isDemoTitle(title)) {
+      return res.status(400).json({ error: 'demo_not_supported', message: 'Paste a real event link' });
+    }
     const normUrl = normalizeUrl(eventUrl);
     if (!normUrl) {
       return res.status(400).json({ error: 'invalid_url', message: 'أدخل رابطًا صحيحًا للحدث' });
@@ -3700,13 +3679,13 @@ async function renderAdminPage(token: string): Promise<string> {
   const foundersC = (await one('SELECT COUNT(*)::int c FROM accounts WHERE founder_number IS NOT NULL AND founder_number<=$1', [FOUNDER_PRO_CAP]))[0]?.c || 0;
   const lifeC = (await one(`SELECT COUNT(*)::int c FROM accounts WHERE plan='lifetime'`))[0]?.c || 0;
   const activeWatch = (await one(`SELECT COUNT(*)::int c FROM subscriptions WHERE monitoring_status='active'`))[0]?.c || 0;
-  const eventsC = (await one('SELECT COUNT(*)::int c FROM events'))[0]?.c || 0;
+  const eventsC = (await one(`SELECT COUNT(*)::int c FROM events WHERE ${notDemoSql()}`))[0]?.c || 0;
   const refSignups = (await one('SELECT COUNT(*)::int c FROM referral_events'))[0]?.c || 0;
   const refQual = (await one(`SELECT COUNT(*)::int c FROM referral_events WHERE status IN ('qualified','rewarded')`))[0]?.c || 0;
   const daysAwarded = (await one('SELECT COALESCE(SUM(referral_days_earned),0)::int c FROM accounts'))[0]?.c || 0;
   const signups = await one('SELECT email, founder_number, plan, pro_until, referral_code, referral_clicks, referral_days_earned, is_partner, created_at FROM accounts ORDER BY id DESC LIMIT 25');
   const partnersC = (await one('SELECT COUNT(*)::int c FROM accounts WHERE is_partner=true'))[0]?.c || 0;
-  const events = await one('SELECT id, title, status, watchers_count, created_at FROM events ORDER BY id DESC LIMIT 12');
+  const events = await one(`SELECT id, title, status, watchers_count, created_at FROM events WHERE ${notDemoSql()} ORDER BY id DESC LIMIT 12`);
 
   const now = Date.now();
   const stat = (n: any, l: string) => `<div class="stat"><div class="n">${n}</div><div class="l">${l}</div></div>`;
@@ -4099,7 +4078,7 @@ app.get('/api/feed', async (req: Request, res: Response) => {
 
 app.get('/api/events', async (_req: Request, res: Response) => {
   try {
-    const r = await pool.query('SELECT * FROM events ORDER BY demand_score DESC, created_at DESC');
+    const r = await pool.query(`SELECT * FROM events WHERE ${notDemoSql()} ORDER BY demand_score DESC, created_at DESC`);
     res.json(r.rows);
   } catch (e: any) {
     res.status(500).json({ error: 'server_error', message: e.message });
