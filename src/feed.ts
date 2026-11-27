@@ -1,5 +1,6 @@
 import { pool, notDemoSql } from './db';
 import { ActivityFeedItem, ActivityType } from './types';
+import { distinctFeed } from './feed-distinct';
 
 const TYPE_EMOJI: Record<ActivityType, string> = {
   watcher_added: '👥',
@@ -19,13 +20,14 @@ export async function getActivityFeed(limit = 20): Promise<ActivityFeedItem[]> {
     `SELECT al.id, al.event_id, al.type, al.message, al.created_at, e.title as event_title
      FROM activity_logs al
      LEFT JOIN events e ON e.id = al.event_id
-     WHERE e.id IS NULL OR ${notDemoSql('e.title')}
+     WHERE (e.id IS NULL OR ${notDemoSql('e.title')})
+       AND al.type <> 'metadata_updated'
      ORDER BY al.created_at DESC
      LIMIT $1`,
-    [limit]
+    [Math.max(limit * 10, 200)]
   );
 
-  return r.rows.map(row => ({
+  const mapped = r.rows.map(row => ({
     id: row.id,
     eventId: row.event_id,
     eventTitle: row.event_title || 'Unknown event',
@@ -33,6 +35,7 @@ export async function getActivityFeed(limit = 20): Promise<ActivityFeedItem[]> {
     message: formatMessage(row.type, row.message, row.event_title),
     createdAt: row.created_at,
   }));
+  return distinctFeed(mapped, limit);
 }
 
 function formatMessage(type: string, raw: string, eventTitle: string): string {

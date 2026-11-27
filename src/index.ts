@@ -5,6 +5,7 @@ import { createHash, timingSafeEqual } from 'crypto';
 import { pool, setupDB, getActiveEventCount, notDemoSql, isDemoTitle } from './db';
 import { runMonitorCycle } from './monitor';
 import { getActivityFeed, logActivity } from './feed';
+import { tickerMessages, countDistinctEvents } from './feed-distinct';
 import { getPublicConfig } from './push';
 import { parseRefCode, referralFriendDays, referralTotalDays, referralProgressLine, referralShareText } from './referral-policy';
 import { qualifyReferral } from './referral';
@@ -295,7 +296,7 @@ function renderTrendingCard(e: any): string {
 // =============================================================================
 // HOME PAGE HTML
 // =============================================================================
-function getHTML(events: any[], feed: any[], alerts24h: number = 0): string {
+function getHTML(events: any[], feed: any[], alerts24h: number = 0, watchersDistinct: number | null = null): string {
   const ej = JSON.stringify(events).replace(/</g, '\\u003c');
   const fj = JSON.stringify(feed).replace(/</g, '\\u003c');
   // FanX secondary entry only renders when FanX is live (avoids a dead link).
@@ -861,19 +862,14 @@ ${POSTHOG_TAG}</head>
   </div>
 </div>
 
-<div class="ticker-wrap active-tab" data-tab="home">
-  <div class="ticker" id="ticker">
-    ${[...Array(2)].map(() => (feed.slice(0, 8).map((f: any) =>
-      `<div class="ticker-item ${f.type === 'alert_sent' ? 'alert' : f.type === 'status_change' ? 'hot' : ''}">${escapeHtml(f.message || '')}</div>`
-    ).join(''))).join('')}
-    <div class="ticker-item hot">⚡ السوق المباشر للمقاعد</div>
-    <div class="ticker-item">🇸🇦 السعودية أولًا</div>
-    <div class="ticker-item alert">🔥 ${events.length} فعالية يتابعها السوق</div>
-    <div class="ticker-item hot">⚡ تنبيهات لحظية للمقاعد</div>
-    <div class="ticker-item">🎟 موسم الرياض · UFC · الدوري السعودي</div>
-    <div class="ticker-item alert">🔥 ${events.length} فعالية مباشرة الآن</div>
+${tickerMessages(feed).length >= 2 ? `<div class="ticker-wrap active-tab" data-tab="home">
+  <div class="ticker" id="ticker" style="animation:none">
+    ${tickerMessages(feed).map((m: string) => {
+      const f = feed.find((x: any) => (x.message || '').trim() === m) || {};
+      return `<div class="ticker-item ${f.type === 'alert_sent' ? 'alert' : f.type === 'status_change' ? 'hot' : ''}">${escapeHtml(m)}</div>`;
+    }).join('')}
   </div>
-</div>
+</div>` : ''}
 
 <section class="hero active-tab" data-tab="home">
   <div class="hero-left">
@@ -887,7 +883,7 @@ ${POSTHOG_TAG}</head>
     <div class="stats-row">
       <div class="stat-block">
         <div class="stat-label" id="sl1">Watching now</div>
-        <div class="stat-val" id="sv1">${events.reduce((a: number, e: any) => a + (e.watchers_count || 0), 0)}<span>live</span></div>
+        <div class="stat-val" id="sv1">${watchersDistinct ?? events.reduce((a: number, e: any) => a + (e.watchers_count || 0), 0)}<span>live</span></div>
       </div>
       <div class="stat-block">
         <div class="stat-label" id="sl2">Check speed</div>
@@ -895,7 +891,7 @@ ${POSTHOG_TAG}</head>
       </div>
       <div class="stat-block">
         <div class="stat-label" id="sl3">Events live</div>
-        <div class="stat-val" id="sv3">${events.length}<span>now</span></div>
+        <div class="stat-val" id="sv3">${countDistinctEvents(events)}<span>now</span></div>
       </div>
     </div>
   </div>
@@ -1038,7 +1034,7 @@ ${POSTHOG_TAG}</head>
       <div class="why-stat-label" id="why-l1">فعالية في السوق</div>
     </div>
     <div class="why-stat">
-      <div class="why-stat-val">${events.reduce((a: number, e: any) => a + (e.watchers_count || 0), 0)}</div>
+      <div class="why-stat-val">${watchersDistinct ?? events.reduce((a: number, e: any) => a + (e.watchers_count || 0), 0)}</div>
       <div class="why-stat-label" id="why-l2">متابع نشط</div>
     </div>
     <div class="why-stat">
@@ -3041,8 +3037,17 @@ app.get('/', async (_req: Request, res: Response) => {
     );
     alerts24h = parseInt(a.rows[0]?.c || '0', 10) || 0;
   } catch (_) { }
+  // Distinct real watchers (unique emails subscribed to non-demo events), not a sum of per-event counters.
+  let watchersDistinct: number | null = null;
+  try {
+    const w = await pool.query(
+      `SELECT COUNT(DISTINCT LOWER(s.email)) AS c FROM subscriptions s
+       JOIN events e ON e.id = s.event_id WHERE ${notDemoSql('e.title')}`
+    );
+    watchersDistinct = parseInt(w.rows[0]?.c || '0', 10) || 0;
+  } catch (_) { }
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.end(getHTML(events, feed, alerts24h));
+  res.end(getHTML(events, feed, alerts24h, watchersDistinct));
 });
 
 // ── SEO / GEO ────────────────────────────────────────────────────────────────
