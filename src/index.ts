@@ -592,6 +592,9 @@ h1 em{color:var(--lime);font-style:normal;display:block}
 .pc-price{font-size:44px;font-weight:900;color:#fff;font-family:'DM Sans',sans-serif;line-height:1}
 .pricing-lifetime .pc-price{color:var(--lime)}
 .pc-period{font-size:11px;color:var(--muted2);margin:4px 0 8px}
+.per-seg{display:flex;justify-content:center;gap:4px;margin:0 auto 18px;padding:4px;width:max-content;max-width:100%;border:1px solid var(--border);border-radius:999px;background:#0d1018}
+.per-seg button{font:inherit;font-size:13px;font-weight:800;padding:9px 18px;border:0;border-radius:999px;background:transparent;color:var(--muted2);cursor:pointer;touch-action:manipulation}
+.per-seg button.on{background:var(--lime);color:#080a0e}
 .pc-sub{font-size:11px;color:var(--lime);margin-bottom:16px;font-weight:600;line-height:1.5}
 .pc-features{margin:16px 0;display:flex;flex-direction:column;gap:8px}
 .pc-f{font-size:12px;color:#d4d4d8;display:flex;align-items:center;gap:6px}
@@ -1127,11 +1130,15 @@ ${fanxOn ? `
     <div class="section-title" style="margin-bottom:10px" id="prc-h1">السرعة تحدّد من يمسك ومن يفوّته</div>
     <p style="font-size:14px;color:var(--muted2);line-height:1.75;max-width:520px;margin:0 auto" id="prc-sub">ما نبيع features أو حدود تقنية. نبيع <strong style='color:#fff'>الأولوية</strong> و<strong style='color:#fff'>السرعة</strong> و<strong style='color:#fff'>الوصول للسوق المباشر</strong>.</p>
   </div>
+  <div class="per-seg" role="group" aria-label="billing period">
+    <button type="button" id="per-y" class="on" aria-pressed="true" onclick="setProPer('year')">سنوي · وفّر 17%</button>
+    <button type="button" id="per-m" aria-pressed="false" onclick="setProPer('month')">شهري</button>
+  </div>
   <div class="pricing-grid">
     <div class="pricing-card">
       <div class="pc-name" id="pc-pro-name">الأولوية</div>
-      <div class="pc-price"><span style="font-size:.48em;font-weight:800;color:var(--muted2);text-decoration:line-through;margin-inline-end:10px;vertical-align:middle">$19</span>$9</div>
-      <div class="pc-period" id="pc-pro-period">شهرياً · سعر المؤسسين للأوائل</div>
+      <div class="pc-price"><span id="pc-pro-strike" style="font-size:.48em;font-weight:800;color:var(--muted2);text-decoration:line-through;margin-inline-end:10px;vertical-align:middle">$15.83</span><span id="pc-pro-amt">$7.50</span></div>
+      <div class="pc-period" id="pc-pro-period">شهرياً · تُدفع $90 مرة وحدة بالسنة · توفر 17%</div>
       <div class="pc-sub" id="pc-pro-tag" style="color:#fb923c">أسرع تنبيهات. أولوية فحص.</div>
       <div id="pro-founder-live" style="margin:10px 0 4px"></div>
       <div class="pc-features">
@@ -1139,7 +1146,7 @@ ${fanxOn ? `
         <div class="pc-f" id="pc-pro-f2">أولوية فحص أعلى من المجاني</div>
         <div class="pc-f" id="pc-pro-f3">وصول كامل لذكاء السوق</div>
       </div>
-      <button class="pc-btn" id="pc-pro-btn" onclick="openUpgradeModal('pro')">اقفل ٩$ شهريًا مدى الحياة</button>
+      <button class="pc-btn" id="pc-pro-btn" onclick="openUpgradeModal('pro')">احجز Pro السنوي — $90</button>
     </div>
     <div class="pricing-card pricing-lifetime">
       <div class="pc-badge" id="pc-life-badge">💎 المؤسسون · للأوائل</div>
@@ -1598,6 +1605,7 @@ function setLang(l) {
   s('pc-pro-name', t.pcProName); s('pc-pro-period', t.pcProPeriod); s('pc-pro-tag', t.pcProTag);
   s('pc-pro-f1', t.pcProF1); s('pc-pro-f2', t.pcProF2); s('pc-pro-f3', t.pcProF3);
   s('pc-pro-btn', t.pcProBtn);
+  applyProPer();
   s('pc-life-badge', t.pcLifeBadge); s('pc-life-name', t.pcLifeName); s('pc-life-period', t.pcLifePeriod);
   s('pc-life-sub', t.pcLifeSub);
   s('pc-life-f1', t.pcLifeF1); s('pc-life-f2', t.pcLifeF2); s('pc-life-f3', t.pcLifeF3); s('pc-life-f4', t.pcLifeF4);
@@ -2121,9 +2129,33 @@ async function showFirstAlertShareCard(email) {
   } catch (_) { }
 }
 
+// Pro billing period (Ali 2026-11-27: yearly first and selected by default, 2 months free = $90/yr vs $9/mo).
+// Display + waitlist only (no live payment); the chosen period is the plan key sent to the waitlist.
+var proPer = 'year';
+function applyProPer() {
+  var ar = (typeof lang === 'undefined' || lang === 'ar');
+  var y = proPer !== 'month';
+  function put(id, v) { var e = document.getElementById(id); if (e) e.textContent = v; }
+  put('pc-pro-amt', y ? '$7.50' : '$9');
+  put('pc-pro-strike', y ? '$15.83' : '$19');
+  put('pc-pro-period', y
+    ? (ar ? 'شهرياً · تُدفع $90 مرة وحدة بالسنة · توفر 17%' : 'per month · pay $90 once a year · save 17%')
+    : (ar ? 'شهرياً · تُدفع شهرياً · سعر المؤسسين للأوائل' : 'per month · billed monthly · founder price'));
+  put('pc-pro-btn', y
+    ? (ar ? 'احجز Pro السنوي — $90' : 'Reserve Pro yearly — $90')
+    : (ar ? 'اقفل ٩$ شهريًا مدى الحياة' : 'Lock $9/mo for life'));
+  put('per-y', ar ? 'سنوي · وفّر 17%' : 'Yearly · save 17%');
+  put('per-m', ar ? 'شهري' : 'Monthly');
+  var by = document.getElementById('per-y'), bm = document.getElementById('per-m');
+  if (by) { by.className = y ? 'on' : ''; by.setAttribute('aria-pressed', y ? 'true' : 'false'); }
+  if (bm) { bm.className = y ? '' : 'on'; bm.setAttribute('aria-pressed', y ? 'false' : 'true'); }
+}
+function setProPer(p) { proPer = p === 'month' ? 'month' : 'year'; applyProPer(); }
+
 function openUpgradeModal(plan) {
+  if (plan === 'pro' && proPer === 'year') plan = 'pro_yearly';
   const t = T[lang];
-  const planLabel = plan === 'entry' ? t.upgradeEntry : plan === 'pro' ? t.upgradePro : t.upgradeLifetime;
+  const planLabel = plan === 'entry' ? t.upgradeEntry : plan === 'pro' ? t.upgradePro : plan === 'pro_yearly' ? (lang === 'ar' ? 'Pro سنوي (90$ مرة وحدة بالسنة)' : 'Pro yearly ($90 once a year)') : t.upgradeLifetime;
   closeModal('upgrade-modal');
   const m = document.createElement('div');
   m.className = 'modal-overlay';
@@ -4049,7 +4081,7 @@ app.post('/api/waitlist', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'invalid_email' });
     }
     const planStr = String(plan || '');
-    if (!['entry', 'pro', 'lifetime'].includes(planStr)) {
+    if (!['entry', 'pro', 'pro_yearly', 'lifetime'].includes(planStr)) {
       return res.status(400).json({ error: 'invalid_plan' });
     }
     await pool.query(
